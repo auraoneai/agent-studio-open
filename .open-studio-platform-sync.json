@@ -1,0 +1,16 @@
+{
+  "platform_version": "0.3.0",
+  "synced_at": "2026-05-13T00:00:00.000Z",
+  "template": "opensource/open-studio-platform/templates/tauri-app",
+  "contracts": [
+    "aura-ide-kit",
+    "telemetry",
+    "crash",
+    "keychain",
+    "intake-v1.2",
+    "updater",
+    "mcp",
+    "otlp",
+    "llm-gateway"
+  ]
+}

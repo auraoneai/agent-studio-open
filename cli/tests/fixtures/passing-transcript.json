@@ -1,0 +1,22 @@
+[
+  {
+    "operation": "create_task",
+    "request": {"payload": {"capability": "refund", "order_id": "A100"}},
+    "response": {"task_id": "task_1", "state": "submitted"}
+  },
+  {
+    "operation": "poll_task",
+    "request": {"payload": {"task_id": "task_1"}},
+    "response": {"task_id": "task_1", "state": "working"}
+  },
+  {
+    "operation": "poll_task",
+    "request": {"payload": {"task_id": "task_1"}},
+    "response": {"task_id": "task_1", "state": "completed", "result": {"refund_id": "R200"}}
+  },
+  {
+    "operation": "create_task",
+    "request": {"payload": {"capability": "unknown"}},
+    "response": {"state": "failed", "error": {"code": "unsupported_capability", "message": "capability is not declared"}}
+  }
+]

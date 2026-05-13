@@ -1,0 +1,50 @@
+{
+  "name": "@auraone/agent-studio-open",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local-first IDE for debugging, replaying, and regression-testing MCP and A2A agents.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "tsc --noEmit && vite build",
+    "build:web": "AGENT_STUDIO_WEB_BASE=/web/ AGENT_STUDIO_WEB_OUT_DIR=dist/web pnpm build",
+    "typecheck": "tsc --noEmit && tsc -p vscode/tsconfig.json --noEmit",
+    "type-check": "pnpm run typecheck",
+    "tauri": "tauri",
+    "tauri:build": "pnpm build && tauri build",
+    "vscode:build": "tsc -p vscode/tsconfig.json",
+    "test": "vitest run --environment jsdom",
+    "test:a11y": "node scripts/audit_accessibility.mjs",
+    "test:keyboard": "vitest run --environment jsdom src/__tests__/app.test.tsx",
+    "test:screen-reader-smoke": "node scripts/audit_accessibility.mjs",
+    "test:perf": "node scripts/benchmark_ui_overhead.mjs",
+    "test:packaged-startup": "node scripts/benchmark_packaged_startup.mjs",
+    "test:trace-import-benchmark": "PYTHONPATH=cli/src python cli/scripts/benchmark_trace_store.py --rows 100000 --json",
+    "test:replay-benchmark": "PYTHONPATH=cli/src:../tool-call-replay/src python -m pytest -q cli/tests/test_agentstudio_cli.py -k replay_diff",
+    "lint": "tsc --noEmit && tsc -p vscode/tsconfig.json --noEmit",
+    "desktop:check": "cargo test --manifest-path desktop/src-tauri/Cargo.toml"
+  },
+  "dependencies": {
+    "@monaco-editor/react": "^4.7.0",
+    "lucide-react": "^0.554.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "react-virtuoso": "^4.18.7",
+    "zustand": "^5.0.12"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.2.4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@tauri-apps/cli": "2.11.1",
+    "@types/react": "18.3.12",
+    "@types/react-dom": "18.3.1",
+    "@vitejs/plugin-react": "^4.7.0",
+    "fake-indexeddb": "^6.2.5",
+    "tailwindcss": "^4.2.4",
+    "typescript": "^5.7.2",
+    "vite": "^7.3.2",
+    "vitest": "^3.2.4"
+  }
+}

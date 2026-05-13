@@ -1,0 +1,20 @@
+{
+  "trace_id": "otlp-fixture-1",
+  "goal": "Refund order A100",
+  "spans": [
+    {
+      "attributes": {
+        "gen_ai.tool.name": "lookup_order",
+        "gen_ai.tool.arguments": {"order_id": "A100"},
+        "gen_ai.tool.output": {"status": "paid"}
+      }
+    },
+    {
+      "attributes": {
+        "gen_ai.tool.name": "issue_refund",
+        "gen_ai.tool.arguments": {"order_id": "A100", "amount": 42},
+        "gen_ai.tool.output": {"refund_id": "R200"}
+      }
+    }
+  ]
+}

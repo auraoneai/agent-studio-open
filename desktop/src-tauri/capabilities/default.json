@@ -1,0 +1,28 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "identifier": "default",
+  "description": "Agent Studio Open default desktop capability allowlist. Shell and arbitrary HTTP execution are intentionally excluded.",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "dialog:default",
+    "notification:default",
+    "os:default",
+    "process:default",
+    "clipboard-manager:default",
+    "deep-link:default",
+    "updater:default",
+    {
+      "identifier": "fs:scope",
+      "allow": [{ "path": "$APPDATA/**" }, { "path": "$HOME/**" }]
+    },
+    "fs:allow-appdata-read",
+    "fs:allow-appdata-write",
+    "fs:allow-app-read",
+    "fs:allow-app-write",
+    "fs:allow-read-dir",
+    "fs:allow-read-file",
+    "fs:allow-write-file",
+    "fs:allow-mkdir"
+  ]
+}

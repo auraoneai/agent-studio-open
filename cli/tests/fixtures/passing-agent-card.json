@@ -1,0 +1,14 @@
+{
+  "name": "refund-agent",
+  "version": "1.0.0",
+  "endpoint": "https://agent.example.test/a2a",
+  "content_types": ["application/json"],
+  "capabilities": [
+    {
+      "name": "refund",
+      "input_modes": ["application/json"],
+      "output_modes": ["application/json"],
+      "streaming": true
+    }
+  ]
+}

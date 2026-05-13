@@ -1,0 +1,15 @@
+{
+  "trace_id": "phoenix-fixture-1",
+  "goal": "Refund order A100",
+  "spans": [
+    {
+      "attributes": {
+        "input.value": "Refund order A100",
+        "output.value": "looked up order",
+        "gen_ai.tool.name": "lookup_order",
+        "gen_ai.tool.arguments": {"order_id": "A100"},
+        "gen_ai.tool.output": {"status": "paid"}
+      }
+    }
+  ]
+}

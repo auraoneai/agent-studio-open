@@ -1,0 +1,60 @@
+{
+  "name": "agent-studio-open-vscode",
+  "displayName": "Agent Studio Open",
+  "publisher": "auraone",
+  "version": "0.1.0",
+  "engines": {
+    "vscode": "^1.92.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": [
+    "onView:agentStudio.manifest",
+    "onCommand:agentStudio.connectWorkspace",
+    "onCommand:agentStudio.openCompose",
+    "onCommand:agentStudio.openDesktop"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "agentStudio.connectWorkspace",
+        "title": "Agent Studio: Discover MCP Servers"
+      },
+      {
+        "command": "agentStudio.openCompose",
+        "title": "Agent Studio: Open Compose Webview"
+      },
+      {
+        "command": "agentStudio.openDesktop",
+        "title": "Agent Studio: Continue in Desktop App"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "agentStudio",
+          "title": "Agent Studio",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "agentStudio": [
+        {
+          "id": "agentStudio.manifest",
+          "name": "Manifest Inspector"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Agent Studio Open",
+      "properties": {
+        "agentStudio.desktopDeepLink": {
+          "type": "string",
+          "default": "auraone://agent-studio/open",
+          "description": "Deep link used to continue record/replay flows in the desktop app."
+        }
+      }
+    }
+  }
+}

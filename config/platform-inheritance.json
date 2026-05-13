@@ -1,0 +1,40 @@
+{
+  "$schema": "https://schemas.auraone.ai/open-studio/platform-inheritance/v1.json",
+  "product": "agent-studio-open",
+  "platform_version": "0.3.0",
+  "inherits": {
+    "tauri_template": "../../open-studio-platform/templates/tauri-app",
+    "csp": "../../open-studio-platform/configs/platform-contracts.json#/csp_connect_src",
+    "url_scheme": "auraone",
+    "updater": "../../open-studio-platform/configs/platform-contracts.json#/updater",
+    "telemetry_schema": "../../open-studio-platform/schemas/telemetry.schema.json",
+    "telemetry_events": "../../open-studio-platform/schemas/telemetry-events.json",
+    "crash_scrubber": "../../open-studio-platform/configs/sentry-scrub.json",
+    "keychain_api": "../../open-studio-platform/packages/platform-contracts/src/keychain.ts",
+    "intake_schema": "../../open-studio-platform/schemas/intake-packet.schema.json",
+    "intake_roles": "../../open-studio-platform/schemas/intake-roles.json",
+    "extension_hooks": "../../open-studio-platform/schemas/extension-hooks.schema.json"
+  },
+  "browser_edition_constraints": {
+    "stdio_mcp": false,
+    "otlp_receiver": false,
+    "allowed_mcp_transports": ["sse", "http", "websocket"]
+  },
+  "desktop_hooks": [
+    "mcp.stdio",
+    "mcp.sse",
+    "mcp.http",
+    "mcp.websocket",
+    "otlp.http_json",
+    "otlp.http_proto",
+    "otlp.grpc",
+    "llm_gateway.anthropic",
+    "llm_gateway.openai",
+    "llm_gateway.google",
+    "llm_gateway.ollama",
+    "intake.agent_mcp_server_metadata",
+    "intake.agent_trace_card",
+    "intake.agent_regression_test_suite",
+    "intake.agent_otel_spans"
+  ]
+}

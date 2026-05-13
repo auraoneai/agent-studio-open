@@ -1,0 +1,48 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Agent Studio Open",
+  "version": "0.1.0",
+  "identifier": "ai.auraone.agentstudio",
+  "build": {
+    "beforeDevCommand": "pnpm dev",
+    "beforeBuildCommand": "pnpm build",
+    "devUrl": "http://localhost:4319",
+    "frontendDist": "../../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Agent Studio Open",
+        "width": 1440,
+        "height": 960,
+        "minWidth": 980,
+        "minHeight": 720
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self' https://updates.auraone.ai https://updates2.auraone.ai https://intake.auraone.ai https://o.auraone.ai https://sentry.io http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:* wss:; frame-src 'none'; object-src 'none'; base-uri 'self'",
+      "capabilities": ["default"]
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["dmg", "msi", "appimage", "deb", "rpm"],
+    "shortDescription": "Local-first IDE for MCP and A2A agent debugging.",
+    "longDescription": "Agent Studio Open records, replays, compares, and exports local-first agent debugging sessions."
+  },
+  "plugins": {
+    "updater": {
+      "active": true,
+      "endpoints": [
+        "https://updates.auraone.ai/agent-studio-open/{{target}}/{{arch}}/{{current_version}}",
+        "https://updates2.auraone.ai/agent-studio-open/{{target}}/{{arch}}/{{current_version}}"
+      ],
+      "pubkey": "<PLATFORM_UPDATE_PUBKEY>"
+    },
+    "deep-link": {
+      "desktop": {
+        "schemes": ["auraone"]
+      }
+    }
+  }
+}

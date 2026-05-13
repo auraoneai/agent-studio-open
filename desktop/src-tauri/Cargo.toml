@@ -1,0 +1,37 @@
+[package]
+name = "agent-studio-open-core"
+version = "0.1.0"
+edition = "2021"
+description = "Agent Studio Open desktop core command contracts"
+license = "MIT"
+build = "build.rs"
+default-run = "agent-studio-open"
+
+[lib]
+name = "agent_studio_open_core"
+path = "src/lib.rs"
+
+[[bin]]
+name = "agent-studio-open"
+path = "src/main.rs"
+
+[[bin]]
+name = "agentstudio"
+path = "src/agentstudio.rs"
+
+[build-dependencies]
+tauri-build = { version = "2.5.3", features = [] }
+
+[dependencies]
+auraone-platform-keychain = { path = "../../../open-studio-platform/crates/auraone-platform-keychain" }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.145"
+tauri = { version = "2.11.1", features = [] }
+tauri-plugin-clipboard-manager = "2.3.2"
+tauri-plugin-deep-link = "2.4.9"
+tauri-plugin-dialog = "2.4.0"
+tauri-plugin-fs = "2.5.1"
+tauri-plugin-notification = "2.3.3"
+tauri-plugin-os = "2.3.1"
+tauri-plugin-process = "2.3.0"
+tauri-plugin-updater = "2.10.1"
