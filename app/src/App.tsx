@@ -91,7 +91,7 @@ const demoConnection: ConnectionDraft = {
 const demoMode = import.meta.env.VITE_AGENT_STUDIO_DEMO_MODE === "true";
 const demoBrowserUrl =
   import.meta.env.VITE_AGENT_STUDIO_BROWSER_URL ??
-  "https://agent-studio-open.vercel.app/web";
+  "https://agentstudio.auraone.ai";
 
 const surfaceIcons: Record<Surface, LucideIcon> = {
   connect: Plug,

@@ -2,5 +2,17 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "pnpm run build",
   "framework": "vite",
-  "outputDirectory": "dist"
+  "outputDirectory": "dist",
+  "redirects": [
+    {
+      "source": "/web",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/web/",
+      "destination": "/",
+      "permanent": false
+    }
+  ]
 }

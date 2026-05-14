@@ -7,8 +7,8 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc --noEmit && vite build",
-    "build:web": "AGENT_STUDIO_WEB_BASE=${AGENT_STUDIO_WEB_BASE:-/web/} AGENT_STUDIO_WEB_OUT_DIR=${AGENT_STUDIO_WEB_OUT_DIR:-dist/web} pnpm build",
-    "build:demo": "VITE_AGENT_STUDIO_DEMO_MODE=true VITE_AGENT_STUDIO_BROWSER_URL=https://agent-studio-open.vercel.app/web AGENT_STUDIO_WEB_BASE=/ AGENT_STUDIO_WEB_OUT_DIR=dist pnpm build",
+    "build:web": "AGENT_STUDIO_WEB_BASE=${AGENT_STUDIO_WEB_BASE:-/} AGENT_STUDIO_WEB_OUT_DIR=${AGENT_STUDIO_WEB_OUT_DIR:-dist} pnpm build",
+    "build:demo": "VITE_AGENT_STUDIO_DEMO_MODE=true VITE_AGENT_STUDIO_BROWSER_URL=https://agentstudio.auraone.ai AGENT_STUDIO_WEB_BASE=/ AGENT_STUDIO_WEB_OUT_DIR=dist pnpm build",
     "typecheck": "tsc --noEmit && tsc -p vscode/tsconfig.json --noEmit",
     "type-check": "pnpm run typecheck",
     "tauri": "tauri",
