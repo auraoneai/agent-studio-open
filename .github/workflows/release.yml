@@ -79,6 +79,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install Python CLI test dependencies
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest grpcio
+
       - name: Typecheck
         run: pnpm run typecheck
 
