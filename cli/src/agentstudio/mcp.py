@@ -138,7 +138,6 @@ class HTTPTransport:
         self.context = self.auth.ssl_context()
         self.timeout = timeout
         self._rpc = JsonRpc()
-        self.session_id: str | None = None
         self.oauth_metadata = self.auth.discover_oauth_metadata(timeout)
 
     def request(self, method: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -151,13 +150,12 @@ class HTTPTransport:
                 "content-type": "application/json",
                 "accept": "application/json, text/event-stream",
                 "MCP-Protocol-Version": MCP_PROTOCOL_VERSION,
-                **self._request_headers(),
+                **self.headers,
             },
             method="POST",
         )
         try:
             with _urlopen(request, timeout=self.timeout, context=self.context) as response:
-                self._capture_session_id(response.headers.get("MCP-Session-Id"))
                 raw = response.read()
         except urllib.error.HTTPError as error:
             _raise_oauth_hint(error, self.timeout, self.context)
@@ -169,16 +167,6 @@ class HTTPTransport:
 
     def close(self) -> None:
         return None
-
-    def _request_headers(self) -> dict[str, str]:
-        headers = dict(self.headers)
-        if self.session_id:
-            headers["MCP-Session-Id"] = self.session_id
-        return headers
-
-    def _capture_session_id(self, session_id: str | None) -> None:
-        if session_id:
-            self.session_id = session_id
 
 
 class SSETransport:
@@ -207,7 +195,6 @@ class SSETransport:
         self.context = self.auth.ssl_context()
         self.timeout = timeout
         self._rpc = JsonRpc()
-        self.session_id: str | None = None
         self.oauth_metadata = self.auth.discover_oauth_metadata(timeout)
 
     def request(self, method: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -221,20 +208,19 @@ class SSETransport:
                     "content-type": "application/json",
                     "accept": "application/json, text/event-stream",
                     "MCP-Protocol-Version": MCP_PROTOCOL_VERSION,
-                    **self._request_headers(),
+                    **self.headers,
                 },
                 method="POST",
             )
             try:
                 with _urlopen(post, timeout=self.timeout, context=self.context) as response:
-                    self._capture_session_id(response.headers.get("MCP-Session-Id"))
                     response.read()
             except urllib.error.HTTPError as error:
                 _raise_oauth_hint(error, self.timeout, self.context)
                 raise
         stream = urllib.request.Request(
             self.url,
-            headers={"accept": "text/event-stream", "MCP-Protocol-Version": MCP_PROTOCOL_VERSION, **self._request_headers()},
+            headers={"accept": "text/event-stream", "MCP-Protocol-Version": MCP_PROTOCOL_VERSION, **self.headers},
             method="GET",
         )
         deadline = time.time() + self.timeout
@@ -259,16 +245,6 @@ class SSETransport:
 
     def close(self) -> None:
         return None
-
-    def _request_headers(self) -> dict[str, str]:
-        headers = dict(self.headers)
-        if self.session_id:
-            headers["MCP-Session-Id"] = self.session_id
-        return headers
-
-    def _capture_session_id(self, session_id: str | None) -> None:
-        if session_id:
-            self.session_id = session_id
 
 
 class WebSocketTransport:

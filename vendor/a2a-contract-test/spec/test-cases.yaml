@@ -1,0 +1,11 @@
+profile: auraone-a2a-contract-profile-v1
+cases:
+  - agent_card_required_fields
+  - capability_content_modes
+  - task_creation_submitted_state
+  - task_progress_and_terminal_state
+  - cancellation_when_declared
+  - unsupported_capability_error
+  - malformed_payload_error
+  - transcript_secret_redaction
+

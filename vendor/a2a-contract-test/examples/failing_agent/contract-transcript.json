@@ -1,0 +1,18 @@
+[
+  {
+    "operation": "create_task",
+    "request": {"headers": {"api_key": "pypi-test"}, "payload": "not-json"},
+    "response": {"task_id": "task_a", "state": "queued"}
+  },
+  {
+    "operation": "poll_task",
+    "request": {"payload": {"task_id": "task_a"}},
+    "response": {"task_id": "task_b", "state": "running", "result": "not-json"}
+  },
+  {
+    "operation": "create_task",
+    "request": {"payload": {"capability": "unknown"}},
+    "response": {"state": "failed", "error": {"message": "bad"}}
+  }
+]
+

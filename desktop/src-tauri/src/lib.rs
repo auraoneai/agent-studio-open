@@ -76,31 +76,35 @@ pub fn registered_ipc_commands() -> Vec<IpcCommand> {
     vec![
         IpcCommand {
             name: "mcp_connect",
-            description: "Connect to MCP stdio, SSE, HTTP, or WebSocket transports.",
+            description: "Connect to MCP stdio, SSE, HTTP, or WebSocket transports through the CLI runtime.",
         },
         IpcCommand {
             name: "mcp_manifest",
-            description: "Fetch tools, resources, prompts, server logs, and risk findings.",
+            description: "Fetch tools, resources, prompts, server logs, and risk findings through MCP discovery.",
         },
         IpcCommand {
             name: "trace_store_query",
-            description: "Read .ast trace sessions and full-text index results.",
+            description: "Read .ast trace sessions and full-text index results through the CLI runtime.",
         },
         IpcCommand {
             name: "trace_store_write",
-            description: "Persist recorded sessions to the local .ast store.",
+            description: "Persist imported sessions to the local .ast store through the CLI runtime.",
         },
         IpcCommand {
             name: "replay_run",
-            description: "Invoke tool-call-replay through the long-running sidecar service.",
+            description: "Invoke tool-call-replay through the CLI runtime.",
         },
         IpcCommand {
             name: "a2a_run_contracts",
-            description: "Invoke a2a-contract-test and stream contract results.",
+            description: "Invoke a2a-contract-test and return contract results.",
         },
         IpcCommand {
             name: "otlp_receiver_toggle",
             description: "Start or stop the localhost-only OTLP HTTP/gRPC receiver.",
+        },
+        IpcCommand {
+            name: "compare_run",
+            description: "Compare two trace stores through the CLI runtime.",
         },
         IpcCommand {
             name: "export_bundle",
@@ -130,6 +134,10 @@ pub fn registered_ipc_commands() -> Vec<IpcCommand> {
                 "List approved provider secret identifiers through the inherited platform keychain.",
         },
     ]
+}
+
+pub fn planned_ipc_commands() -> Vec<IpcCommand> {
+    Vec::new()
 }
 
 impl TryFrom<PlatformKeychainKey> for KeychainKey {
@@ -287,16 +295,31 @@ mod tests {
     use super::*;
 
     #[test]
-    fn registers_agent_studio_ipc_surface() {
+    fn registers_implemented_agent_studio_ipc_surface() {
         let commands = registered_ipc_commands();
         let names: Vec<&str> = commands.iter().map(|command| command.name).collect();
         assert!(names.contains(&"mcp_connect"));
+        assert!(names.contains(&"mcp_manifest"));
+        assert!(names.contains(&"trace_store_query"));
+        assert!(names.contains(&"trace_store_write"));
+        assert!(names.contains(&"replay_run"));
+        assert!(names.contains(&"a2a_run_contracts"));
         assert!(names.contains(&"otlp_receiver_toggle"));
+        assert!(names.contains(&"compare_run"));
         assert!(names.contains(&"export_bundle"));
+        assert!(names.contains(&"sidecar_health"));
         assert!(names.contains(&"platform_keychain_set"));
         assert!(names.contains(&"platform_keychain_get"));
         assert!(names.contains(&"platform_keychain_delete"));
         assert!(names.contains(&"platform_keychain_list"));
+        assert!(commands.iter().all(
+            |command| !command.name.trim().is_empty() && !command.description.trim().is_empty()
+        ));
+    }
+
+    #[test]
+    fn has_no_unimplemented_planned_ipc_left() {
+        assert!(planned_ipc_commands().is_empty());
     }
 
     #[test]

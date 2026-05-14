@@ -11,7 +11,7 @@ engineer:
 3. Compose schema-backed tool calls and model-driven agent loops.
 4. Record a session into a portable `.ast` trace store.
 5. Replay the same session deterministically with mocked tool outputs.
-6. Compare model behavior across provider profiles.
+6. Compare model behavior across provider profiles, including custom model IDs.
 7. Import OTEL GenAI spans or Phoenix JSON and convert failures to regressions.
 8. Export GitHub Actions, JUnit XML, PR comments, trace cards, and AuraOne
    intake packets.
@@ -26,7 +26,7 @@ built on other frameworks.
 ```bash
 brew install auraoneai/open/agent-studio-open
 agentstudio --json connect stdio --command python --arg opensource/agent-studio-cookbook/sample-servers/filesystem-risk/server.py
-agentstudio risk-scan opensource/agent-studio-cookbook/sample-servers/filesystem-risk --format json --out reports/risk.json
+agentstudio risk-scan opensource/agent-studio-cookbook/sample-servers/filesystem-risk --format json --fail-on critical --out reports/risk.json
 agentstudio import-trace opensource/agent-studio-open/cli/tests/fixtures/openai_events.jsonl --format openai --store /tmp/filesystem-smoke.ast
 agentstudio export pr-comment /tmp/filesystem-smoke.ast --out reports/filesystem-smoke.md
 agentstudio export gh-action opensource/agent-studio-open/cli/tests/fixtures/regressions --out reports/agent-regression
@@ -34,7 +34,7 @@ agentstudio export gh-action opensource/agent-studio-open/cli/tests/fixtures/reg
 
 Desktop is required for stdio MCP and the local OTLP receiver. Browser edition
 supports remote SSE / HTTP MCP, A2A card testing, trace import, IndexedDB trace
-storage, and passphrase-protected provider keys.
+storage, passphrase-protected provider keys, and custom model picker entries.
 
 ## Editions
 
@@ -63,7 +63,9 @@ storage, and passphrase-protected provider keys.
 Trace contents stay on the user's machine unless the user explicitly exports a
 file, posts a PR comment, or packages an AuraOne intake packet. Telemetry is off
 by default and never includes prompts, tool outputs, provider keys, headers, or
-trace payloads. Desktop provider keys are stored through the OS keychain.
+trace payloads. Desktop provider keys are stored through the OS keychain. Browser
+provider keys are stored as passphrase-encrypted IndexedDB records and can be
+saved, verified, or removed from Settings.
 
 ## License
 

@@ -1,0 +1,29 @@
+{
+  "spans": [
+    {
+      "trace_id": "trace-1",
+      "span_id": "span-1",
+      "name": "chat.completion",
+      "attributes": {
+        "gen_ai.system": "openai",
+        "gen_ai.request.model": "gpt-5.1",
+        "gen_ai.prompt": "Score this answer for user test@example.com with Bearer secret-token",
+        "gen_ai.completion": "The answer is mostly correct.",
+        "eval.expected": "mentions correctness and missing evidence",
+        "authorization": "Bearer should-redact"
+      }
+    },
+    {
+      "trace_id": "trace-2",
+      "span_id": "span-2",
+      "name": "phoenix.llm",
+      "attributes": {
+        "llm.provider": "anthropic",
+        "llm.model_name": "claude-4.5-sonnet",
+        "input.value": "Classify the failure mode.",
+        "output.value": "tool_retry_loop"
+      }
+    }
+  ]
+}
+

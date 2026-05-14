@@ -1,0 +1,5 @@
+{
+  "trace-1": {"passed": true, "score": 0.92},
+  "trace-2": {"passed": false, "score": 0.31}
+}
+

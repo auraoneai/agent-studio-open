@@ -1,0 +1,23 @@
+{
+  "trace_id": "refund-success-001",
+  "goal": "Check whether order A101 is eligible for a refund without mutating state.",
+  "events": [
+    {
+      "type": "tool_call",
+      "tool_name": "lookup_order",
+      "arguments": {"order_id": "A101"}
+    },
+    {
+      "type": "tool_result",
+      "tool_name": "lookup_order",
+      "output": {"status": "delivered", "refund_window_days": 30}
+    },
+    {
+      "type": "final_answer",
+      "output": "Order A101 is eligible for refund review."
+    }
+  ],
+  "regression_status": "passing smoke trace",
+  "policy_checks": ["read_only_refund_check"],
+  "human_intervention": "none recorded"
+}

@@ -1,0 +1,39 @@
+{
+  "schema_version": "tool-call-replay/v1",
+  "trace_id": "refund-failure-001",
+  "goal": "Refund order A100 without issuing duplicate credits.",
+  "events": [
+    {
+      "type": "tool_call",
+      "tool_name": "lookup_order",
+      "arguments": {"order_id": "A100"}
+    },
+    {
+      "type": "tool_result",
+      "tool_name": "lookup_order",
+      "output": {"status": "delivered"}
+    },
+    {
+      "type": "tool_call",
+      "tool_name": "issue_refund",
+      "arguments": {"order_id": "A100", "amount": 42.5}
+    },
+    {
+      "type": "tool_result",
+      "tool_name": "issue_refund",
+      "output": {"refund_id": "R1"}
+    },
+    {
+      "type": "tool_call",
+      "tool_name": "issue_refund",
+      "arguments": {"order_id": "A100", "amount": 42.5}
+    },
+    {
+      "type": "final_answer",
+      "output": "Refund completed twice."
+    }
+  ],
+  "regression_status": "covered by generated replay test",
+  "policy_checks": ["duplicate_refund_guard"],
+  "human_intervention": "reviewer stopped rollout after duplicate refund trace"
+}

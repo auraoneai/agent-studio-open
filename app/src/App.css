@@ -259,8 +259,38 @@ code {
 .studio-mark {
   flex: 0 0 auto;
   display: block;
-  width: 30px;
-  height: 30px;
+}
+
+.studio-mark-frame {
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid #ffffffcc;
+  border-radius: 11px;
+  background:
+    linear-gradient(145deg, #ffffff 0%, #f6f5ef 42%, #d9d5c8 100%);
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    inset 0 -1px 2px #1a18151c,
+    0 8px 20px #1a181512;
+}
+
+.studio-mark-frame::before {
+  position: absolute;
+  inset: 2px;
+  border: 1px solid #0e7c6e1f;
+  border-radius: 9px;
+  content: "";
+}
+
+.studio-mark-image {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 84%;
+  height: 84%;
+  object-fit: contain;
 }
 
 .brand-text {
@@ -736,6 +766,24 @@ code {
   justify-content: space-between;
   border-color: #0e7c6e33;
   background: #0e7c6e08;
+}
+
+.demo-banner-copy {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.demo-banner-copy > span {
+  min-width: 0;
+}
+
+.demo-banner-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
 }
 
 .operation-banner {

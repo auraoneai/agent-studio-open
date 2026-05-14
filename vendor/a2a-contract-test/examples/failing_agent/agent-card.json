@@ -1,0 +1,19 @@
+{
+  "name": "failing-agent",
+  "version": "preview",
+  "endpoint": "localhost:8080",
+  "content_types": ["text/plain"],
+  "capabilities": [
+    {
+      "name": "review_task",
+      "input_modes": [],
+      "output_modes": ["application/json"]
+    },
+    {
+      "name": "review_task",
+      "input_modes": ["application/json"],
+      "output_modes": []
+    }
+  ]
+}
+

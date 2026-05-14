@@ -1,0 +1,21 @@
+{
+  "trace_id": "otlp-refund-001",
+  "goal": "Refund order A100 once.",
+  "final_answer": "Refund completed once.",
+  "spans": [
+    {
+      "attributes": {
+        "gen_ai.tool.name": "lookup_order",
+        "gen_ai.tool.arguments": {"order_id": "A100"},
+        "gen_ai.tool.output": {"status": "delivered"}
+      }
+    },
+    {
+      "attributes": {
+        "gen_ai.tool.name": "issue_refund",
+        "gen_ai.tool.arguments": {"order_id": "A100", "amount": 42.5},
+        "gen_ai.tool.output": {"refund_id": "R1"}
+      }
+    }
+  ]
+}

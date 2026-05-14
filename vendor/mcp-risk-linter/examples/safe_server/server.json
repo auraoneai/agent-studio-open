@@ -1,0 +1,13 @@
+{
+  "name": "safe-fixture-server",
+  "tools": [
+    {
+      "name": "read_project_summary",
+      "description": "Reads the local synthetic project summary metadata without writing files or calling external services."
+    },
+    {
+      "name": "list_fixture_labels",
+      "description": "Lists static labels bundled with this synthetic fixture and has no side effects."
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+[
+  {
+    "operation": "create_task",
+    "request": {"headers": {"authorization": "Bearer sk-test"}, "payload": {"capability": "review_task", "input": "score this"}},
+    "response": {"task_id": "task_123", "state": "submitted"}
+  },
+  {
+    "operation": "poll_task",
+    "request": {"payload": {"task_id": "task_123"}},
+    "response": {"task_id": "task_123", "state": "working"}
+  },
+  {
+    "operation": "poll_task",
+    "request": {"payload": {"task_id": "task_123"}},
+    "response": {"task_id": "task_123", "state": "completed", "result": {"score": 0.91}}
+  },
+  {
+    "operation": "cancel_task",
+    "request": {"payload": {"task_id": "task_456"}},
+    "response": {"task_id": "task_456", "state": "cancelled", "result": {"cancelled": true}}
+  },
+  {
+    "operation": "create_task",
+    "request": {"payload": {"capability": "unknown"}},
+    "response": {"state": "failed", "error": {"code": "unsupported_capability", "message": "capability is not declared"}}
+  }
+]
+

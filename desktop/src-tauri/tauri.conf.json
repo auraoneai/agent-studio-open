@@ -46,6 +46,14 @@
       "icons/icon.ico",
       "icons/icon.png"
     ],
+    "resources": [
+      "../../cli/src",
+      "../../vendor/tool-call-replay/src",
+      "../../vendor/agent-trace-card/src",
+      "../../vendor/otel-eval-bridge/src",
+      "../../vendor/mcp-risk-linter/src",
+      "../../vendor/a2a-contract-test/src"
+    ],
     "shortDescription": "Local-first IDE for MCP and A2A agent debugging.",
     "longDescription": "Agent Studio Open records, replays, compares, and exports local-first agent debugging sessions."
   },

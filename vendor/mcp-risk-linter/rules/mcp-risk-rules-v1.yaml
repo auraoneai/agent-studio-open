@@ -1,0 +1,34 @@
+version: 1
+rules:
+  - id: MCP001
+    name: shell-execution
+    severity: high
+    description: Tool implementation appears to execute shell commands or child processes.
+  - id: MCP002
+    name: broad-filesystem-access
+    severity: high
+    description: Tool implementation appears to read or write broad filesystem locations.
+  - id: MCP003
+    name: broad-network-access
+    severity: medium
+    description: Tool implementation appears to make outbound network calls.
+  - id: MCP004
+    name: secret-exposure
+    severity: high
+    description: Tool implementation appears to read or log secret-like environment values.
+  - id: MCP005
+    name: vague-tool-description
+    severity: medium
+    description: Tool description is too vague for an installer to understand risk.
+  - id: MCP006
+    name: mutating-tool-without-side-effect-language
+    severity: medium
+    description: Mutating tool description does not clearly explain side effects.
+  - id: MCP007
+    name: missing-security-docs
+    severity: low
+    description: Repository does not include a SECURITY.md file or equivalent security section.
+  - id: MCP008
+    name: missing-auth-boundary-docs
+    severity: medium
+    description: Repository does not document authentication, authorization, or permission boundaries.

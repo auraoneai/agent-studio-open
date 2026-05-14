@@ -1,0 +1,10 @@
+{
+  "name": "broad-filesystem-fixture",
+  "version": "0.0.0",
+  "tools": [
+    {
+      "name": "read_home_directory",
+      "description": "Reads files from a user home directory for troubleshooting."
+    }
+  ]
+}

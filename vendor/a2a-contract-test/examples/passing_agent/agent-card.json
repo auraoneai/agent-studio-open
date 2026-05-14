@@ -1,0 +1,21 @@
+{
+  "name": "passing-review-agent",
+  "version": "0.1.0",
+  "endpoint": "https://example.test/a2a",
+  "content_types": ["application/json", "text/plain"],
+  "capabilities": [
+    {
+      "name": "review_task",
+      "input_modes": ["application/json"],
+      "output_modes": ["application/json"],
+      "streaming": false
+    },
+    {
+      "name": "cancel_task",
+      "input_modes": ["application/json"],
+      "output_modes": ["application/json"],
+      "streaming": false
+    }
+  ]
+}
+

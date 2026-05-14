@@ -1,0 +1,7 @@
+tool_order:
+  - lookup_order
+  - issue_refund
+final_answer_contains: "once"
+max_retries: 0
+forbidden_tools:
+  - delete_order

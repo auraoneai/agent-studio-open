@@ -1,0 +1,8 @@
+{"type":"goal","trace_id":"refund-failure-001","content":"Refund order A100 without issuing duplicate credits."}
+{"type":"tool_call","trace_id":"refund-failure-001","tool_name":"lookup_order","arguments":{"order_id":"A100","api_key":"sk-test-secret"}}
+{"type":"tool_result","trace_id":"refund-failure-001","tool_name":"lookup_order","output":{"status":"delivered","paid":true}}
+{"type":"tool_call","trace_id":"refund-failure-001","tool_name":"issue_refund","arguments":{"order_id":"A100","amount":42.5}}
+{"type":"tool_result","trace_id":"refund-failure-001","tool_name":"issue_refund","output":{"refund_id":"R1","status":"created"}}
+{"type":"tool_call","trace_id":"refund-failure-001","tool_name":"issue_refund","arguments":{"order_id":"A100","amount":42.5}}
+{"type":"tool_result","trace_id":"refund-failure-001","tool_name":"issue_refund","output":{"refund_id":"R2","status":"created"}}
+{"type":"final","trace_id":"refund-failure-001","content":"Refund completed twice."}

@@ -1,0 +1,19 @@
+<svg width="192" height="192" viewBox="0 0 192 192" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">AgentStudio logo</title>
+  <desc id="desc">Interlocking agent path mark for AgentStudio.</desc>
+  <rect x="16" y="16" width="160" height="160" rx="34" fill="#080D18"/>
+  <path d="M54 128L83.5 64H108.5L138 128H113L108.3 116.8H82.9L78 128H54Z" fill="#F0F4FB"/>
+  <path d="M89.4 99.8H101.8L95.8 84.7L89.4 99.8Z" fill="#080D18"/>
+  <path d="M55 60C55 47.8 64.8 38 77 38H112C126.4 38 138 49.6 138 64V69.5H118.8V65.4C118.8 59.5 114.1 54.8 108.2 54.8H80.4C76.7 54.8 73.8 57.7 73.8 61.4C73.8 64.5 76 67.2 79 67.8L115.1 75.7C131.1 79.2 142.5 93.3 142.5 109.7C142.5 130.2 125.9 146.8 105.4 146.8H55.5V129.2H105.4C116.2 129.2 124.9 120.5 124.9 109.7C124.9 101.7 119.3 94.8 111.5 93.1L75.5 85.2C63.5 82.6 55 72 55 60Z" fill="#7CD3FF"/>
+  <path d="M138 64V69.5H118.8V65.4C118.8 59.5 114.1 54.8 108.2 54.8H80.4C76.7 54.8 73.8 57.7 73.8 61.4C73.8 64.5 76 67.2 79 67.8L83.7 68.8L90 52H109.2C125.1 52 138 64.9 138 80.8V64Z" fill="#3AD8A4"/>
+  <circle cx="55" cy="60" r="8" fill="#C8FF5E"/>
+  <circle cx="138" cy="128" r="8" fill="#F5B94C"/>
+  <rect x="16.75" y="16.75" width="158.5" height="158.5" rx="33.25" stroke="url(#paint0_linear_144_12)" stroke-width="1.5"/>
+  <defs>
+    <linearGradient id="paint0_linear_144_12" x1="34" y1="28" x2="158" y2="166" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#7CD3FF"/>
+      <stop offset="0.54" stop-color="#3AD8A4"/>
+      <stop offset="1" stop-color="#F5B94C"/>
+    </linearGradient>
+  </defs>
+</svg>

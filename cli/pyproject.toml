@@ -7,7 +7,7 @@ name = "agentstudio"
 version = "0.1.0"
 description = "Headless Agent Studio Open protocol, trace-store, sidecar, and export CLI."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = "MIT"
 authors = [{ name = "AuraOne", email = "opensource@auraone.ai" }]
 keywords = ["mcp", "a2a", "opentelemetry", "agents", "replay", "debugging"]
@@ -15,7 +15,6 @@ classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: Developers",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12"
 ]
@@ -31,6 +30,11 @@ where = ["src"]
 addopts = "-q"
 pythonpath = [
   "src",
+  "../vendor/mcp-risk-linter/src",
+  "../vendor/a2a-contract-test/src",
+  "../vendor/tool-call-replay/src",
+  "../vendor/agent-trace-card/src",
+  "../vendor/otel-eval-bridge/src",
   "../../mcp-risk-linter/src",
   "../../a2a-contract-test/src",
   "../../tool-call-replay/src",

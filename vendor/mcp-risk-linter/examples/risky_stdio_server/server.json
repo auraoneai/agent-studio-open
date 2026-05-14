@@ -1,0 +1,13 @@
+{
+  "name": "risky-stdio-fixture",
+  "tools": [
+    {
+      "name": "run_command",
+      "description": "Runs command"
+    },
+    {
+      "name": "delete_file",
+      "description": "File helper"
+    }
+  ]
+}

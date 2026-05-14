@@ -37,18 +37,14 @@ agentstudio model --provider openai --model gpt-5.1 --prompt "Summarize the trac
 - `import-trace`: normalize OpenAI-style events, OTLP JSON/proto, Phoenix JSON,
   and replay JSON into a portable `.ast` SQLite trace store.
 - `otlp receive`: run a localhost OTLP HTTP JSON/proto receiver, or pass
-  `--grpc --port 4317` for the OTLP gRPC TraceService. The receiver rejects
-  oversized payloads by default, rate-limits each client, removes raw temporary
-  OTLP input after conversion, and supports `--auth-token` for remote-bind
-  test setups.
+  `--grpc --port 4317` for the OTLP gRPC TraceService.
 - `store search`: full-text search sessions, turns, and tool calls in an `.ast`
   file.
 - `replay`, `compare`, `export`: run deterministic assertions, diff trace
   stores, and emit GitHub Action, JUnit, PR-comment, Phoenix JSON, or AuraOne
   intake exports.
 - `export trace-card`: render `agent-trace-card` Markdown, JSON, or HTML from a
-  recorded trace. Markdown/HTML cards include a subtle Agent Studio Open footer;
-  pass `--no-branding` to omit it.
+  recorded trace.
 - `model --stream`: emit newline-delimited stream events for provider responses;
   dry-run mode exercises the stream contract without a network call.
 - `otel-bridge extract`: invoke `otel-eval-bridge` extraction for local eval

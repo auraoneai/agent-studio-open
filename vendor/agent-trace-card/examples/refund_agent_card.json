@@ -1,0 +1,14 @@
+{
+  "schema_version": "agent-trace-card/v1",
+  "trace_id": "refund-failure-001",
+  "goal": "Refund order A100 without issuing duplicate credits.",
+  "outcome": "failed",
+  "tools": ["issue_refund", "lookup_order"],
+  "retry_count": 1,
+  "data_touched": ["order_id:A100"],
+  "policy_checks": ["duplicate_refund_guard"],
+  "failure_modes": ["duplicate_mutating_tool_call", "incorrect_terminal_answer"],
+  "human_intervention": "reviewer stopped rollout after duplicate refund trace",
+  "regression_status": "covered by generated replay test",
+  "links": {}
+}

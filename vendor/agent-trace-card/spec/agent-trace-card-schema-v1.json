@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://auraone.ai/schemas/agent-trace-card-v1.json",
+  "title": "Agent Trace Card v1",
+  "type": "object",
+  "required": ["schema_version", "trace_id", "goal", "outcome", "tools", "failure_modes", "regression_status"],
+  "properties": {
+    "schema_version": {"const": "agent-trace-card/v1"},
+    "trace_id": {"type": "string", "minLength": 1},
+    "goal": {"type": "string"},
+    "outcome": {"type": "string"},
+    "tools": {"type": "array", "items": {"type": "string"}},
+    "retry_count": {"type": "integer", "minimum": 0},
+    "data_touched": {"type": "array", "items": {"type": "string"}},
+    "policy_checks": {"type": "array", "items": {"type": "string"}},
+    "failure_modes": {"type": "array", "items": {"type": "string"}},
+    "human_intervention": {"type": "string"},
+    "regression_status": {"type": "string"},
+    "links": {"type": "object"}
+  }
+}

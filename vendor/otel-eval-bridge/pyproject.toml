@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "otel-eval-bridge"
+version = "0.1.0"
+description = "Bridge OpenTelemetry/Phoenix GenAI traces to eval cases and manifests."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{ name = "AuraOne", email = "opensource@auraone.ai" }]
+keywords = ["opentelemetry", "phoenix", "evals", "traces", "genai"]
+
+[project.scripts]
+otel-eval-bridge = "otel_eval_bridge.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+

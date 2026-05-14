@@ -111,7 +111,6 @@ def build_parser() -> argparse.ArgumentParser:
     card.add_argument("trace")
     card.add_argument("--out", required=True)
     card.add_argument("--format", choices=["markdown", "json", "html"], default="markdown")
-    card.add_argument("--no-branding", action="store_true", help="omit the Agent Studio Open footer from markdown/html trace cards")
     phoenix = export_sub.add_parser("phoenix-json")
     phoenix.add_argument("store")
     phoenix.add_argument("--out", required=True)
@@ -141,11 +140,7 @@ def build_parser() -> argparse.ArgumentParser:
     recv.add_argument("--host", default="127.0.0.1")
     recv.add_argument("--port", type=int, default=4318)
     recv.add_argument("--once", action="store_true")
-    recv.add_argument(
-        "--grpc",
-        action="store_true",
-        help="serve the OTLP gRPC TraceService on the selected port",
-    )
+    recv.add_argument("--grpc", action="store_true", help="serve the OTLP gRPC TraceService on the selected port")
     recv.add_argument("--max-payload-bytes", type=int, default=DEFAULT_MAX_OTLP_PAYLOAD_BYTES)
     recv.add_argument("--auth-token", help="optional bearer token required for OTLP receiver writes")
     recv.add_argument("--rate-limit-per-minute", type=int, default=DEFAULT_OTLP_RATE_LIMIT_PER_MINUTE)
@@ -342,10 +337,7 @@ def _export(args: argparse.Namespace) -> int:
         from agent_trace_card.importers import load_trace
         from agent_trace_card.render import render_card
 
-        Path(args.out).write_text(
-            render_card(generate_card(load_trace(_resolve_input_path(args.trace))), args.format, include_branding=not args.no_branding),
-            encoding="utf-8",
-        )
+        Path(args.out).write_text(render_card(generate_card(load_trace(_resolve_input_path(args.trace))), args.format), encoding="utf-8")
         return _emit({"out": args.out, "format": args.format}, getattr(args, "json", False))
     if args.export_command == "phoenix-json":
         export_phoenix_json(args.store, args.out, session_id=args.session_id)
@@ -392,6 +384,24 @@ def _resolve_input_path(path: str | Path) -> Path:
     candidate = Path(path)
     if candidate.exists() or candidate.is_absolute():
         return candidate
+    parts = candidate.parts
+    for engine_name in (
+        "mcp-risk-linter",
+        "a2a-contract-test",
+        "tool-call-replay",
+        "agent-trace-card",
+        "otel-eval-bridge",
+    ):
+        if engine_name in parts:
+            engine_index = parts.index(engine_name)
+            vendor_candidate = (
+                Path(__file__).resolve().parents[3]
+                / "vendor"
+                / engine_name
+                / Path(*parts[engine_index + 1 :])
+            )
+            if vendor_candidate.exists():
+                return vendor_candidate
     cli_root = Path(__file__).resolve().parents[2]
     rooted = (cli_root / candidate).resolve()
     if rooted.exists():

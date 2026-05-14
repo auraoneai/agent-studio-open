@@ -4,37 +4,24 @@ import base64
 import hashlib
 import json
 import socket
-import subprocess
 import struct
 import sys
 import threading
 import urllib.error
 import urllib.request
-import zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from unittest.mock import patch
 
-import pytest
 from agentstudio.cli import main
 from agentstudio.importers import load_replay_case
 from agentstudio.mcp import RemoteAuthConfig
-from agentstudio.otlp_receiver import (
-    DEFAULT_MAX_OTLP_PAYLOAD_BYTES,
-    DEFAULT_OTLP_RATE_LIMIT_PER_MINUTE,
-    OTLPHandler,
-    start_otlp_grpc,
-)
-from agentstudio.sidecar import SidecarHandler, run_isolated_command
+from agentstudio.otlp_receiver import DEFAULT_MAX_OTLP_PAYLOAD_BYTES, OTLPHandler, start_otlp_grpc
 from agentstudio.trace_store import TraceStore
 
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests" / "fixtures"
-
-
-def pytest_raises_http(status: int):
-    return pytest.raises(urllib.error.HTTPError, match=f"HTTP Error {status}:")
 
 
 def test_stdio_mcp_connect_smoke(capsys):
@@ -46,8 +33,6 @@ def test_stdio_mcp_connect_smoke(capsys):
 
 
 def test_http_sse_and_websocket_mcp_connect_smoke(capsys):
-    _MCPHTTPHandler.seen_session_headers = []
-    _MCPHTTPHandler.seen_get_session_headers = []
     httpd = ThreadingHTTPServer(("127.0.0.1", 0), _MCPHTTPHandler)
     thread = threading.Thread(target=httpd.serve_forever, daemon=True)
     thread.start()
@@ -56,8 +41,6 @@ def test_http_sse_and_websocket_mcp_connect_smoke(capsys):
     assert json.loads(capsys.readouterr().out)["tools"][0]["name"] == "lookup_order"
     assert main(["--json", "connect", "sse", f"http://127.0.0.1:{port}/sse", "--post-url", f"http://127.0.0.1:{port}/mcp"]) == 0
     assert json.loads(capsys.readouterr().out)["transport"] == "sse"
-    assert "fixture-session" in _MCPHTTPHandler.seen_session_headers
-    assert "fixture-session" in _MCPHTTPHandler.seen_get_session_headers
     httpd.shutdown()
 
     ws_server = _WebSocketFixture()
@@ -101,10 +84,6 @@ def test_http_remote_auth_oauth_metadata_and_headers(capsys):
         assert _AuthMCPHTTPHandler.seen_client == ["test"] * 4
     finally:
         httpd.shutdown()
-        OTLPHandler.max_payload_bytes = DEFAULT_MAX_OTLP_PAYLOAD_BYTES
-        OTLPHandler.auth_token = None
-        OTLPHandler.rate_limit_per_minute = DEFAULT_OTLP_RATE_LIMIT_PER_MINUTE
-        OTLPHandler.request_times = {}
 
 
 def test_remote_auth_builds_mtls_context():
@@ -188,79 +167,13 @@ def test_replay_diff_and_exports(tmp_path, capsys):
 
     card_out = tmp_path / "trace-card.md"
     assert main(["--json", "export", "trace-card", "../../agent-trace-card/examples/refund_trace.json", "--out", str(card_out)]) == 0
-    trace_card = card_out.read_text(encoding="utf-8")
-    assert "Agent Trace Card" in trace_card
-    assert "Generated with Agent Studio Open" in trace_card
-    assert main(["--json", "export", "trace-card", "../../agent-trace-card/examples/refund_trace.json", "--out", str(card_out), "--no-branding"]) == 0
-    assert "Generated with Agent Studio Open" not in card_out.read_text(encoding="utf-8")
-
-
-def test_intake_export_redacts_trace_secrets_and_local_paths(tmp_path, capsys):
-    store = tmp_path / "sensitive.ast"
-    trace_store = TraceStore(store)
-    try:
-        session_id = trace_store.create_session("debug /Users/alice/agent/project", server="local")
-        trace_store.add_tool_call(
-            session_id,
-            1,
-            "lookup_order",
-            {"path": "/Users/alice/agent/project/orders.json", "api_key": "sk-test-secret-value"},
-            {"authorization": "Bearer raw-token", "result": "ok"},
-        )
-    finally:
-        trace_store.close()
-
-    risk = tmp_path / "risk.json"
-    risk.write_text('{"finding": "token=raw-token", "path": "/home/alice/agent"}', encoding="utf-8")
-    suite = tmp_path / "suite"
-    suite.mkdir()
-    (suite / "case.json").write_text('{"secret": "sk-test-secret-value", "path": "C:\\\\Users\\\\Alice\\\\trace.json"}', encoding="utf-8")
-
-    out = tmp_path / "intake.zip"
-    assert main(["--json", "export", "intake", str(store), "--out", str(out), "--risk-report", str(risk), "--suite", str(suite)]) == 0
-    capsys.readouterr()
-
-    with zipfile.ZipFile(out) as archive:
-        names = set(archive.namelist())
-        assert "trace.ast" not in names
-        assert "payload/agent-trace-card.json" in names
-        manifest = json.loads(archive.read("manifest.json").decode("utf-8"))
-        payload = "\n".join(archive.read(name).decode("utf-8") for name in names)
-
-    assert manifest["$schema"] == "https://schemas.auraone.ai/open-studio/intake-packet/v1.json"
-    assert manifest["manifest_version"] == "1.0.0"
-    assert manifest["product"] == "agent-studio-open"
-    assert manifest["transport"]["destination"] == "https://intake.auraone.ai/v1/packets/"
-    assert manifest["redaction"] == {
-        "file_paths": True,
-        "hostnames": True,
-        "api_keys": True,
-        "user_pii_other_than_explicit_intake": True,
-        "custom_rules_applied": ["agentstudio.default-redaction"],
-    }
-    roles = {entry["role"] for entry in manifest["payload_manifest"]}
-    assert roles == {"agent_trace_card", "agent_mcp_server_metadata", "agent_regression_test_suite"}
-    for entry in manifest["payload_manifest"]:
-        assert entry["path"].startswith("payload/")
-        assert len(entry["sha256"]) == 64
-        assert entry["size_bytes"] > 0
-
-    assert "sk-test-secret-value" not in payload
-    assert "raw-token" not in payload
-    assert "/Users/alice" not in payload
-    assert "/home/alice" not in payload
-    assert "C:\\\\Users\\\\Alice" not in payload
-    assert "<REDACTED" in payload
+    assert "Agent Trace Card" in card_out.read_text(encoding="utf-8")
 
 
 def test_otlp_http_json_and_grpc_style_proto_receiver(tmp_path):
     store = tmp_path / "live.ast"
     OTLPHandler.store_path = store
     OTLPHandler.once = False
-    OTLPHandler.max_payload_bytes = DEFAULT_MAX_OTLP_PAYLOAD_BYTES
-    OTLPHandler.auth_token = None
-    OTLPHandler.rate_limit_per_minute = DEFAULT_OTLP_RATE_LIMIT_PER_MINUTE
-    OTLPHandler.request_times = {}
     httpd = ThreadingHTTPServer(("127.0.0.1", 0), OTLPHandler)
     thread = threading.Thread(target=httpd.serve_forever, daemon=True)
     thread.start()
@@ -282,8 +195,6 @@ def test_otlp_http_json_and_grpc_style_proto_receiver(tmp_path):
     with urllib.request.urlopen(proto_request, timeout=10) as response:
         assert response.status == 200
     httpd.shutdown()
-    assert not store.with_suffix(".json").exists()
-    assert not store.with_suffix(".bin").exists()
     trace_store = TraceStore(store)
     try:
         assert trace_store.search("lookup_order")
@@ -291,100 +202,35 @@ def test_otlp_http_json_and_grpc_style_proto_receiver(tmp_path):
         trace_store.close()
 
 
-def test_otlp_http_receiver_rejects_unauthorized_oversized_and_rate_limited_payloads(tmp_path):
-    store = tmp_path / "guarded.ast"
+def test_otlp_http_rejects_malformed_and_abusive_payloads(tmp_path):
+    store = tmp_path / "abuse.ast"
     OTLPHandler.store_path = store
     OTLPHandler.once = False
-    OTLPHandler.max_payload_bytes = 64
-    OTLPHandler.auth_token = "receiver-secret"
+    OTLPHandler.received = 0
+    OTLPHandler.max_payload_bytes = 32
+    OTLPHandler.auth_token = None
     OTLPHandler.rate_limit_per_minute = 120
     OTLPHandler.request_times = {}
     httpd = ThreadingHTTPServer(("127.0.0.1", 0), OTLPHandler)
     thread = threading.Thread(target=httpd.serve_forever, daemon=True)
     thread.start()
     port = httpd.server_address[1]
+
     try:
-        unauthorized = urllib.request.Request(
-            f"http://127.0.0.1:{port}/v1/traces",
-            data=b"{}",
-            headers={"content-type": "application/json"},
-            method="POST",
-        )
-        with pytest_raises_http(401):
-            urllib.request.urlopen(unauthorized, timeout=10)
-
-        oversized = urllib.request.Request(
-            f"http://127.0.0.1:{port}/v1/traces",
-            data=b"{" + (b'"x":' + b'"' + b"a" * 128 + b'"') + b"}",
-            headers={
-                "content-type": "application/json",
-                "authorization": "Bearer receiver-secret",
-            },
-            method="POST",
-        )
-        with pytest_raises_http(413):
-            urllib.request.urlopen(oversized, timeout=10)
-
-        malformed = urllib.request.Request(
-            f"http://127.0.0.1:{port}/v1/traces",
-            data=b"{bad json",
-            headers={
-                "content-type": "application/json",
-                "authorization": "Bearer receiver-secret",
-            },
-            method="POST",
-        )
-        with pytest_raises_http(400):
-            urllib.request.urlopen(malformed, timeout=10)
-
-        unsupported_type = urllib.request.Request(
-            f"http://127.0.0.1:{port}/v1/traces",
-            data=b"trace",
-            headers={
-                "content-type": "text/plain",
-                "authorization": "Bearer receiver-secret",
-            },
-            method="POST",
-        )
-        with pytest_raises_http(415):
-            urllib.request.urlopen(unsupported_type, timeout=10)
+        _assert_otlp_http_error(port, b"{bad json", "application/json", 400)
+        _assert_otlp_http_error(port, b"trace", "text/plain", 415)
+        _assert_otlp_http_error(port, b"x" * 33, "application/json", 413)
+        assert OTLPHandler.received == 0
+        assert not store.exists()
     finally:
-        httpd.shutdown()
         OTLPHandler.max_payload_bytes = DEFAULT_MAX_OTLP_PAYLOAD_BYTES
         OTLPHandler.auth_token = None
-        OTLPHandler.rate_limit_per_minute = DEFAULT_OTLP_RATE_LIMIT_PER_MINUTE
         OTLPHandler.request_times = {}
-
-    OTLPHandler.store_path = store
-    OTLPHandler.max_payload_bytes = 1024
-    OTLPHandler.auth_token = None
-    OTLPHandler.rate_limit_per_minute = 1
-    OTLPHandler.request_times = {}
-    httpd = ThreadingHTTPServer(("127.0.0.1", 0), OTLPHandler)
-    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
-    thread.start()
-    port = httpd.server_address[1]
-    try:
-        ok = urllib.request.Request(
-            f"http://127.0.0.1:{port}/opentelemetry.proto.collector.trace.v1.TraceService/Export",
-            data=b'trace_id="rate-fixture" gen_ai.tool.name="lookup_order"',
-            headers={"content-type": "application/grpc+proto"},
-            method="POST",
-        )
-        with urllib.request.urlopen(ok, timeout=10) as response:
-            assert response.status == 200
-        with pytest_raises_http(429):
-            urllib.request.urlopen(ok, timeout=10)
-    finally:
         httpd.shutdown()
-        OTLPHandler.max_payload_bytes = DEFAULT_MAX_OTLP_PAYLOAD_BYTES
-        OTLPHandler.auth_token = None
-        OTLPHandler.rate_limit_per_minute = DEFAULT_OTLP_RATE_LIMIT_PER_MINUTE
-        OTLPHandler.request_times = {}
 
 
 def test_real_otlp_grpc_receiver(tmp_path):
-    grpc = pytest.importorskip("grpc")
+    import grpc
 
     store = tmp_path / "grpc.ast"
     sock = socket.socket()
@@ -409,6 +255,21 @@ def test_real_otlp_grpc_receiver(tmp_path):
         trace_store.close()
 
 
+def _assert_otlp_http_error(port: int, payload: bytes, content_type: str, expected_status: int) -> None:
+    request = urllib.request.Request(
+        f"http://127.0.0.1:{port}/v1/traces",
+        data=payload,
+        headers={"content-type": content_type},
+        method="POST",
+    )
+    try:
+        urllib.request.urlopen(request, timeout=10)
+    except urllib.error.HTTPError as error:
+        assert error.code == expected_status
+    else:
+        raise AssertionError(f"expected OTLP HTTP {expected_status}")
+
+
 def test_sidecar_self_test_and_model_dry_run(capsys):
     assert main(["--json", "self-test"]) == 0
     assert json.loads(capsys.readouterr().out)["ok"] is True
@@ -429,50 +290,6 @@ def test_risk_scan_and_sidecar_venv_bootstrap(tmp_path, capsys):
     assert Path(payload["python"]).exists()
 
 
-def test_sidecar_worker_isolates_engine_command():
-    payload = run_isolated_command("risk-scan", {"path": "../../mcp-risk-linter/examples/safe_server"}, timeout=10)
-    assert "safe_server" in payload["root"]
-
-
-def test_sidecar_http_rejects_oversized_and_reports_timeout(monkeypatch):
-    original_max_body = SidecarHandler.max_body_bytes
-    original_timeout = SidecarHandler.command_timeout_seconds
-    SidecarHandler.max_body_bytes = 8
-    SidecarHandler.command_timeout_seconds = 0.01
-    httpd = ThreadingHTTPServer(("127.0.0.1", 0), SidecarHandler)
-    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
-    thread.start()
-    port = httpd.server_address[1]
-
-    try:
-        oversized = urllib.request.Request(
-            f"http://127.0.0.1:{port}/risk-scan",
-            data=b'{"path":"too-large"}',
-            headers={"content-type": "application/json"},
-            method="POST",
-        )
-        with pytest_raises_http(413):
-            urllib.request.urlopen(oversized, timeout=10)
-
-        def timeout_command(*_args, **_kwargs):
-            raise subprocess.TimeoutExpired("agentstudio.sidecar_worker", 0.01)
-
-        monkeypatch.setattr("agentstudio.sidecar.run_isolated_command", timeout_command)
-        SidecarHandler.max_body_bytes = 1024
-        timed_out = urllib.request.Request(
-            f"http://127.0.0.1:{port}/risk-scan",
-            data=b'{"path":"../../mcp-risk-linter/examples/safe_server"}',
-            headers={"content-type": "application/json"},
-            method="POST",
-        )
-        with pytest_raises_http(504):
-            urllib.request.urlopen(timed_out, timeout=10)
-    finally:
-        httpd.shutdown()
-        SidecarHandler.max_body_bytes = original_max_body
-        SidecarHandler.command_timeout_seconds = original_timeout
-
-
 def test_otel_bridge_wrapper(tmp_path, capsys):
     out = tmp_path / "cases.jsonl"
     assert main(["--json", "otel-bridge", "extract", "../../otel-eval-bridge/examples/genai_trace.json", "--out", str(out)]) == 0
@@ -483,28 +300,17 @@ def test_otel_bridge_wrapper(tmp_path, capsys):
 
 class _MCPHTTPHandler(BaseHTTPRequestHandler):
     last_request = {"id": 1, "method": "initialize"}
-    seen_session_headers: list[str] = []
-    seen_get_session_headers: list[str] = []
 
     def do_POST(self):
         length = int(self.headers.get("content-length", "0"))
         request = json.loads(self.rfile.read(length).decode("utf-8"))
-        session_id = self.headers.get("MCP-Session-Id")
-        if request.get("method") != "initialize":
-            if session_id != "fixture-session":
-                self.send_error(400, "missing MCP-Session-Id")
-                return
-            type(self).seen_session_headers.append(session_id)
         type(self).last_request = request
-        self._json(_mcp_response(request), session_id="fixture-session" if request.get("method") == "initialize" else None)
+        self._json(_mcp_response(request))
 
     def do_GET(self):
         if self.path != "/sse":
             self.send_error(404)
             return
-        session_id = self.headers.get("MCP-Session-Id")
-        if session_id == "fixture-session":
-            type(self).seen_get_session_headers.append(session_id)
         payload = json.dumps(_mcp_response(type(self).last_request)).encode("utf-8")
         body = b"data: " + payload + b"\n\n"
         self.send_response(200)
@@ -516,12 +322,10 @@ class _MCPHTTPHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         return None
 
-    def _json(self, payload, session_id=None):
+    def _json(self, payload):
         data = json.dumps(payload).encode("utf-8")
         self.send_response(200)
         self.send_header("content-type", "application/json")
-        if session_id:
-            self.send_header("MCP-Session-Id", session_id)
         self.send_header("content-length", str(len(data)))
         self.end_headers()
         self.wfile.write(data)

@@ -1,0 +1,29 @@
+name: A2A Contract Test
+description: Run offline A2A-style agent card and task lifecycle contract tests.
+author: AuraOne
+branding:
+  icon: git-branch
+  color: blue
+inputs:
+  agent-card:
+    description: Path to agent-card.json
+    required: true
+  transcript:
+    description: Optional path to contract-transcript.json
+    required: false
+  output:
+    description: Markdown report output path
+    required: false
+    default: a2a-contract-report.md
+runs:
+  using: composite
+  steps:
+    - run: python -m pip install "${{ github.action_path }}"
+      shell: bash
+    - run: |
+        if [ -n "${{ inputs.transcript }}" ]; then
+          a2a-contract-test run --agent-card "${{ inputs.agent-card }}" --transcript "${{ inputs.transcript }}" --out "${{ inputs.output }}"
+        else
+          a2a-contract-test run --agent-card "${{ inputs.agent-card }}" --out "${{ inputs.output }}"
+        fi
+      shell: bash

@@ -1,0 +1,28 @@
+{
+  "trace_id": "ticket-human-review-001",
+  "goal": "Prepare a response for a customer support ticket with a policy edge case.",
+  "events": [
+    {
+      "type": "tool_call",
+      "tool_name": "lookup_ticket",
+      "arguments": {"ticket_id": "T900"}
+    },
+    {
+      "type": "tool_result",
+      "tool_name": "lookup_ticket",
+      "output": {"tier": "enterprise", "policy_exception": true}
+    },
+    {
+      "type": "tool_call",
+      "tool_name": "draft_response",
+      "arguments": {"ticket_id": "T900"}
+    },
+    {
+      "type": "final_answer",
+      "output": "Draft prepared and routed to a human reviewer."
+    }
+  ],
+  "regression_status": "needs policy regression case",
+  "policy_checks": ["enterprise_exception_review"],
+  "human_intervention": "support lead reviewed the exception before sending"
+}

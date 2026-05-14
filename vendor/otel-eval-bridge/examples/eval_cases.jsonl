@@ -1,0 +1,2 @@
+{"expected":"mentions correctness and missing evidence","input":"Score this answer for user [EMAIL] with [SECRET]","metadata":{"model":"gpt-5.1","provider":"openai"},"name":"chat.completion","observed":"The answer is mostly correct.","span_id":"span-1","trace_id":"trace-1"}
+
