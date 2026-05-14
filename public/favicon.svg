@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="fg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e40af" />
+      <stop offset="25%" stop-color="#3b82f6" />
+      <stop offset="50%" stop-color="#6366f1" />
+      <stop offset="75%" stop-color="#8b5cf6" />
+      <stop offset="100%" stop-color="#a855f7" />
+    </linearGradient>
+    <radialGradient id="bg" cx="50%" cy="40%">
+      <stop offset="0%" stop-color="#111827" />
+      <stop offset="100%" stop-color="#030712" />
+    </radialGradient>
+    <radialGradient id="core" cx="50%" cy="35%">
+      <stop offset="0%" stop-color="#e0f2fe" />
+      <stop offset="60%" stop-color="#60a5fa" />
+      <stop offset="100%" stop-color="#3b82f6" />
+    </radialGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="softglow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3.5" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Dark circular background -->
+  <circle cx="32" cy="32" r="32" fill="url(#bg)" />
+
+  <!-- Subtle outer ring -->
+  <circle cx="32" cy="32" r="29" fill="none"
+          stroke="url(#fg)" stroke-width="0.8" opacity="0.25" />
+
+  <!-- Outer orbital ring (dashed) -->
+  <circle cx="32" cy="32" r="24" fill="none"
+          stroke="url(#fg)" stroke-width="2" stroke-dasharray="5 10"
+          opacity="0.7" filter="url(#glow)" />
+
+  <!-- Inner orbital ring (dashed) -->
+  <circle cx="32" cy="32" r="18" fill="none"
+          stroke="#60a5fa" stroke-width="1.2" stroke-dasharray="3 7"
+          opacity="0.4" />
+
+  <!-- Energy nodes at cardinal points -->
+  <circle cx="56" cy="32" r="2.5" fill="#60a5fa" filter="url(#glow)" opacity="0.9" />
+  <circle cx="8"  cy="32" r="2.5" fill="#a855f7" filter="url(#glow)" opacity="0.8" />
+  <circle cx="32" cy="8"  r="2.5" fill="#3b82f6" filter="url(#glow)" opacity="0.8" />
+  <circle cx="32" cy="56" r="2.5" fill="#6366f1" filter="url(#glow)" opacity="0.8" />
+
+  <!-- Smaller diagonal nodes -->
+  <circle cx="47" cy="17" r="1.5" fill="#8b5cf6" opacity="0.6" />
+  <circle cx="17" cy="17" r="1.5" fill="#60a5fa" opacity="0.5" />
+  <circle cx="17" cy="47" r="1.5" fill="#3b82f6" opacity="0.5" />
+  <circle cx="47" cy="47" r="1.5" fill="#a855f7" opacity="0.5" />
+
+  <!-- Central bright core -->
+  <circle cx="32" cy="32" r="7" fill="url(#core)" opacity="0.15" filter="url(#softglow)" />
+  <circle cx="32" cy="32" r="4" fill="url(#core)" opacity="0.6" filter="url(#glow)" />
+  <circle cx="32" cy="32" r="2" fill="#e0f2fe" opacity="0.9" />
+</svg>
