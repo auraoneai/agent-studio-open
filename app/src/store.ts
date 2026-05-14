@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { initialProviderKeys } from "./data";
 import type { StudioState } from "./types";
 
 export const initialStudioState: StudioState = {
@@ -12,7 +13,9 @@ export const initialStudioState: StudioState = {
   errorMessage: null,
   selectedToolName: "refund_order",
   selectedTraceId: "trace-refund",
-  selectedModels: ["claude-sonnet-4.7", "gpt-5.1"],
+  selectedModels: ["claude-opus-4-7", "gpt-5.5"],
+  customModelId: "",
+  providerKeys: initialProviderKeys,
   search: "",
 };
 

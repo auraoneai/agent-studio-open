@@ -1,0 +1,9 @@
+node_modules
+dist
+.vercel
+desktop/src-tauri/target
+desktop/src-tauri/gen
+crates/*/target
+.DS_Store
+*.pyc
+__pycache__/

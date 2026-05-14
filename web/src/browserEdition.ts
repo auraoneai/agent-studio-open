@@ -105,6 +105,19 @@ export async function loadBrowserProviderKey(provider: string, passphrase: strin
   return decoder.decode(plaintext);
 }
 
+export async function deleteBrowserProviderKey(provider: string): Promise<void> {
+  const db = await openBrowserDatabase();
+  await deleteRecord(db, SECRET_STORE, provider);
+  db.close();
+}
+
+export async function listBrowserProviderKeys(): Promise<Array<Pick<BrowserProviderKeyRecord, "provider" | "updatedAt">>> {
+  const db = await openBrowserDatabase();
+  const records = await getAllRecords<BrowserProviderKeyRecord>(db, SECRET_STORE);
+  db.close();
+  return records.map(({ provider, updatedAt }) => ({ provider, updatedAt }));
+}
+
 export function validateByoProviderKey(provider: string, apiKey: string): { ok: true } | { ok: false; message: string } {
   if (!provider.trim()) {
     return { ok: false, message: "Choose a provider before saving a key." };
@@ -170,6 +183,15 @@ function getAllRecords<T>(db: IDBDatabase, storeName: string): Promise<T[]> {
     const request = tx.objectStore(storeName).getAll();
     request.onsuccess = () => resolve(request.result as T[]);
     request.onerror = () => reject(request.error ?? new Error(`failed to list ${storeName}`));
+  });
+}
+
+function deleteRecord(db: IDBDatabase, storeName: string, key: IDBValidKey): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, "readwrite");
+    tx.objectStore(storeName).delete(key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error ?? new Error(`failed to delete ${storeName}`));
   });
 }
 

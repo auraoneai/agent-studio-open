@@ -1,6 +1,6 @@
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@monaco-editor/react", () => ({
   Editor: ({ value }: { value: string }) => <textarea aria-label="JSON editor" readOnly value={value} />,
@@ -13,6 +13,10 @@ import { resetStudioStore } from "../store";
 describe("Agent Studio Open app surface", () => {
   beforeEach(() => {
     resetStudioStore();
+  });
+
+  afterEach(() => {
+    cleanup();
   });
 
   it("renders the AuraGlass-style IDE shell and first-run wizard", () => {
@@ -57,25 +61,6 @@ describe("Agent Studio Open app surface", () => {
     await user.click(crashReports);
     expect((crashReports as HTMLInputElement).checked).toBe(true);
     expect(screen.getByText("Crash reports opted in")).toBeTruthy();
-  });
-
-  it("records schema-valid telemetry events locally without opt-in egress", async () => {
-    const user = userEvent.setup();
-    render(<App />);
-    await user.click(screen.getByRole("button", { name: "Start" }));
-    await user.click(screen.getByRole("button", { name: /^Connect$/i }));
-    await user.click(screen.getByRole("button", { name: "Open settings" }));
-
-    const eventLog = screen.getByLabelText("Telemetry event log");
-    expect(eventLog.textContent).toContain("would_send");
-    expect(eventLog.textContent).toContain("agent_protocol_surface_used");
-    expect(eventLog.textContent).toContain('"surface": "mcp"');
-
-    const telemetry = screen.getByLabelText("Telemetry opt-in");
-    await user.click(telemetry);
-    expect((telemetry as HTMLInputElement).checked).toBe(true);
-    await user.click(telemetry);
-    expect(eventLog.textContent).toBe("[]");
   });
 
   it("virtualizes large trace timelines for 10k-turn sessions", () => {

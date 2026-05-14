@@ -3,6 +3,9 @@ import type {
   Capability,
   ExportBundle,
   Manifest,
+  ModelPreset,
+  ModelVendor,
+  ProviderKeyState,
   Span,
   Surface,
   TimelineEvent,
@@ -34,17 +37,70 @@ export const capabilities: Capability[] = [
   { id: "passphrase", label: "Passphrase-protected browser secrets", desktop: false, browser: true },
 ];
 
-export const surfaces: Array<{ id: Surface; label: string; shortcut: string }> = [
-  { id: "connect", label: "Connect", shortcut: "1" },
-  { id: "compose", label: "Compose", shortcut: "2" },
-  { id: "traces", label: "Traces", shortcut: "3" },
-  { id: "replay", label: "Replay", shortcut: "4" },
-  { id: "a2a", label: "A2A", shortcut: "5" },
-  { id: "observe", label: "Observe", shortcut: "6" },
-  { id: "compare", label: "Compare", shortcut: "7" },
-  { id: "ship", label: "Ship", shortcut: "8" },
-  { id: "settings", label: "Settings", shortcut: "," },
+export const surfaces: Array<{ id: Surface; label: string; shortcut: string; group: "work" | "observe" | "release" }> = [
+  { id: "connect", label: "Connect", shortcut: "1", group: "work" },
+  { id: "compose", label: "Compose", shortcut: "2", group: "work" },
+  { id: "traces", label: "Traces", shortcut: "3", group: "observe" },
+  { id: "replay", label: "Replay", shortcut: "4", group: "observe" },
+  { id: "a2a", label: "A2A", shortcut: "5", group: "observe" },
+  { id: "observe", label: "Observe", shortcut: "6", group: "observe" },
+  { id: "compare", label: "Compare", shortcut: "7", group: "release" },
+  { id: "ship", label: "Ship", shortcut: "8", group: "release" },
+  { id: "settings", label: "Settings", shortcut: ",", group: "release" },
 ];
+
+export const modelPresets: ModelPreset[] = [
+  {
+    id: "claude-opus-4-7",
+    label: "claude-opus-4-7",
+    vendor: "anthropic",
+    verified: true,
+    description: "Anthropic frontier model, 1M-context.",
+    contextWindow: "1M ctx",
+  },
+  {
+    id: "gpt-5.5",
+    label: "gpt-5.5",
+    vendor: "openai",
+    verified: true,
+    description: "OpenAI flagship, tool-use tuned.",
+    contextWindow: "400K ctx",
+  },
+  {
+    id: "gemini-3.1-pro-preview",
+    label: "gemini-3.1-pro-preview",
+    vendor: "google",
+    verified: true,
+    description: "Google preview, long-context reasoning.",
+    contextWindow: "2M ctx",
+  },
+  {
+    id: "llama-4-local",
+    label: "llama-4-local",
+    vendor: "local",
+    verified: true,
+    description: "Local Ollama / llama.cpp endpoint.",
+    contextWindow: "128K ctx",
+  },
+];
+
+export const models = modelPresets.map((preset) => preset.id);
+
+export const vendorLabels: Record<ModelVendor, string> = {
+  anthropic: "Anthropic",
+  openai: "OpenAI",
+  google: "Google",
+  local: "Local",
+  custom: "Custom",
+};
+
+export const initialProviderKeys: Record<ModelVendor, ProviderKeyState> = {
+  anthropic: { vendor: "anthropic", status: "none", hint: "", lastVerifiedAt: null },
+  openai: { vendor: "openai", status: "none", hint: "", lastVerifiedAt: null },
+  google: { vendor: "google", status: "none", hint: "", lastVerifiedAt: null },
+  local: { vendor: "local", status: "none", hint: "", lastVerifiedAt: null },
+  custom: { vendor: "custom", status: "none", hint: "", lastVerifiedAt: null },
+};
 
 const refundTool: ToolDefinition = {
   name: "refund_order",
@@ -175,7 +231,7 @@ export const traceSessions: TraceSession[] = [
   {
     id: "trace-refund",
     name: "Late delivery refund",
-    model: "claude-sonnet-4.7",
+    model: "claude-opus-4-7",
     status: "passed",
     createdAt: "2026-05-12T09:41:09Z",
     tags: ["refund", "mcp", "regression"],
@@ -184,7 +240,7 @@ export const traceSessions: TraceSession[] = [
   {
     id: "trace-rate-limit",
     name: "429 retry handling",
-    model: "gpt-5.1",
+    model: "gpt-5.5",
     status: "warning",
     createdAt: "2026-05-12T10:14:23Z",
     tags: ["retry", "diff"],
@@ -204,7 +260,7 @@ export const traceSessions: TraceSession[] = [
   {
     id: "trace-delete",
     name: "Deletion guardrail blocked",
-    model: "gemini-2.5-pro",
+    model: "gemini-3.1-pro-preview",
     status: "failed",
     createdAt: "2026-05-12T11:03:44Z",
     tags: ["safety", "a2a"],
@@ -235,7 +291,11 @@ export const spans: Span[] = [
   { id: "span-4", name: "mcp.refund_order", kind: "tool", startMs: 1370, durationMs: 310, status: "error" },
 ];
 
-export const models = ["claude-sonnet-4.7", "gpt-5.1", "gemini-2.5-pro", "llama-4-local"];
+export const sampleTelemetryEvents = [
+  { id: "tel-1", timestamp: "09:38:02", name: "studio.boot", redacted: true, summary: "edition=desktop sandboxed=true" },
+  { id: "tel-2", timestamp: "09:41:11", name: "tool.invoke", redacted: true, summary: "tool=refund_order outcome=ok" },
+  { id: "tel-3", timestamp: "09:42:24", name: "regression.export", redacted: true, summary: "format=github-action sessions=1" },
+];
 
 export function validateJson(input: string): { ok: true; value: unknown } | { ok: false; message: string } {
   try {

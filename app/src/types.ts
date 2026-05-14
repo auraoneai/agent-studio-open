@@ -15,6 +15,26 @@ export type Surface =
 
 export type Theme = "dark" | "light" | "contrast";
 
+export type ModelVendor = "anthropic" | "openai" | "google" | "local" | "custom";
+
+export type ProviderKeyStatus = "none" | "saved" | "verified" | "error";
+
+export interface ModelPreset {
+  id: string;
+  label: string;
+  vendor: ModelVendor;
+  verified: boolean;
+  description: string;
+  contextWindow: string;
+}
+
+export interface ProviderKeyState {
+  vendor: ModelVendor;
+  status: ProviderKeyStatus;
+  hint: string;
+  lastVerifiedAt: string | null;
+}
+
 export interface Capability {
   id: string;
   label: string;
@@ -130,5 +150,7 @@ export interface StudioState {
   selectedToolName: string;
   selectedTraceId: string;
   selectedModels: string[];
+  customModelId: string;
+  providerKeys: Record<ModelVendor, ProviderKeyState>;
   search: string;
 }

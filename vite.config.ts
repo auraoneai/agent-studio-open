@@ -1,14 +1,11 @@
 import react from "@vitejs/plugin-react";
 import { fileURLToPath } from "node:url";
-import { resolve } from "node:path";
 import { defineConfig } from "vitest/config";
 
-const workspaceRoot = resolve(
-  fileURLToPath(new URL(".", import.meta.url)),
-  "../..",
-);
 const browserBase = process.env.AGENT_STUDIO_WEB_BASE ?? "/";
 const outDir = process.env.AGENT_STUDIO_WEB_OUT_DIR ?? "dist";
+const localNodeModules = (name: string) =>
+  fileURLToPath(new URL(`./node_modules/${name}`, import.meta.url));
 
 export default defineConfig({
   plugins: [react()],
@@ -16,14 +13,14 @@ export default defineConfig({
   base: browserBase,
   resolve: {
     alias: {
-      react: resolve(
-        workspaceRoot,
-        "node_modules/.pnpm/react@18.3.1/node_modules/react",
+      "react/jsx-dev-runtime": fileURLToPath(
+        new URL("./node_modules/react/jsx-dev-runtime.js", import.meta.url),
       ),
-      "react-dom": resolve(
-        workspaceRoot,
-        "node_modules/.pnpm/react-dom@18.3.1_react@18.3.1/node_modules/react-dom",
+      "react/jsx-runtime": fileURLToPath(
+        new URL("./node_modules/react/jsx-runtime.js", import.meta.url),
       ),
+      react: localNodeModules("react"),
+      "react-dom": localNodeModules("react-dom"),
     },
   },
   build: {
