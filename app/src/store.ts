@@ -5,7 +5,7 @@ import type { StudioState } from "./types";
 export const initialStudioState: StudioState = {
   edition: "desktop",
   activeSurface: "connect",
-  theme: "dark",
+  theme: "light",
   commandPaletteOpen: false,
   firstRunOpen: true,
   recording: false,

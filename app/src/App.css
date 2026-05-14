@@ -4,26 +4,26 @@
 @config "../../tailwind.config.ts";
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 
-  --void: #07080c;
-  --void-2: #0c0e14;
-  --void-3: #12141c;
-  --void-4: #181a23;
-  --line: #ffffff14;
-  --line-soft: #ffffff0a;
-  --line-strong: #ffffff22;
-  --line-bright: #ffffff33;
-  --bone: #ece6d6;
-  --bone-soft: #ece6d6cc;
-  --bone-faint: #ece6d6b3;
-  --bone-mute: #ece6d6a6;
-  --aura-1: #c9a4ff;
-  --aura-2: #8fb8ff;
-  --aura-3: #6de1d2;
-  --amber: #f6b06b;
-  --signal: #ff8a6b;
-  --signed: #b8f7a5;
+  --void: #f5f3ee;
+  --void-2: #eeecdf;
+  --void-3: #e6e3d8;
+  --void-4: #dad6c8;
+  --line: #1a181514;
+  --line-soft: #1a18150a;
+  --line-strong: #1a181522;
+  --line-bright: #1a181533;
+  --bone: #1a1815;
+  --bone-soft: #1a1815cc;
+  --bone-faint: #1a1815b3;
+  --bone-mute: #1a1815a6;
+  --aura-1: #5e3fc4;
+  --aura-2: #2654b8;
+  --aura-3: #0e7c6e;
+  --amber: #9d5a14;
+  --signal: #c8421a;
+  --signed: #1f6b14;
 
   --ag-void: var(--void);
   --ag-deep: var(--void-2);
@@ -48,8 +48,8 @@
   --as-divider: var(--line);
   --as-divider-strong: var(--line-strong);
   --as-accent: var(--aura-3);
-  --as-accent-soft: #6de1d212;
-  --as-vendor-anthropic: #d09a6b;
+  --as-accent-soft: #0e7c6e12;
+  --as-vendor-anthropic: #9d5a14;
   --as-vendor-openai: var(--signed);
   --as-vendor-google: var(--aura-2);
   --as-vendor-local: var(--aura-1);
@@ -86,8 +86,8 @@ body::before {
   pointer-events: none;
   content: "";
   background:
-    radial-gradient(ellipse 70% 50% at 80% -10%, #6de1d20a 0%, transparent 60%),
-    radial-gradient(ellipse 60% 40% at 0% 110%, #c9a4ff08 0%, transparent 60%);
+    radial-gradient(ellipse 70% 50% at 80% -10%, #0e7c6e0a 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 0% 110%, #5e3fc408 0%, transparent 60%);
 }
 
 body::after {
@@ -219,8 +219,8 @@ code {
   content: "";
   background:
     linear-gradient(90deg, transparent 0, transparent calc(var(--as-sidebar-width) - 1px), var(--line) calc(var(--as-sidebar-width) - 1px), transparent var(--as-sidebar-width)),
-    repeating-linear-gradient(90deg, transparent 0 319px, #ffffff05 320px),
-    repeating-linear-gradient(0deg, transparent 0 179px, #ffffff04 180px);
+    repeating-linear-gradient(90deg, transparent 0 319px, #1a181505 320px),
+    repeating-linear-gradient(0deg, transparent 0 179px, #1a181504 180px);
 }
 
 /* Sidebar */
@@ -337,7 +337,7 @@ code {
 
 .nav-item.active {
   border-left-color: var(--aura-3);
-  background: linear-gradient(90deg, #6de1d212, transparent 80%);
+  background: linear-gradient(90deg, #0e7c6e12, transparent 80%);
   color: var(--bone);
 }
 
@@ -451,7 +451,7 @@ code {
   min-height: var(--as-topbar-height);
   padding: 14px 32px;
   border-bottom: 1px solid var(--line);
-  background: #07080cdd;
+  background: #f5f3eedd;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
@@ -538,12 +538,12 @@ code {
   width: 36px;
   height: 36px;
   place-items: center;
-  border: 1px solid #6de1d244;
+  border: 1px solid #0e7c6e44;
   border-radius: 50%;
   background:
     radial-gradient(circle, var(--bone) 0 3px, transparent 4px),
-    repeating-radial-gradient(circle, #6de1d266 0 1px, transparent 2px 5px),
-    radial-gradient(circle, #6de1d233, transparent 64%);
+    repeating-radial-gradient(circle, #0e7c6e66 0 1px, transparent 2px 5px),
+    radial-gradient(circle, #0e7c6e33, transparent 64%);
   animation: auraSpin 80s linear infinite;
 }
 
@@ -552,21 +552,21 @@ code {
   height: 5px;
   border-radius: 50%;
   background: var(--aura-3);
-  box-shadow: 0 0 18px #6de1d299;
+  box-shadow: 0 0 18px #0e7c6e99;
   animation: corePulse 3.5s ease-in-out infinite;
 }
 
 .health-beacon-amber {
-  border-color: #f6b06b44;
+  border-color: #9d5a1444;
   background:
     radial-gradient(circle, var(--bone) 0 3px, transparent 4px),
-    repeating-radial-gradient(circle, #f6b06b66 0 1px, transparent 2px 5px),
-    radial-gradient(circle, #f6b06b33, transparent 64%);
+    repeating-radial-gradient(circle, #9d5a1466 0 1px, transparent 2px 5px),
+    radial-gradient(circle, #9d5a1433, transparent 64%);
 }
 
 .health-beacon-amber span {
   background: var(--amber);
-  box-shadow: 0 0 18px #f6b06b99;
+  box-shadow: 0 0 18px #9d5a1499;
 }
 
 .icon-button {
@@ -595,7 +595,7 @@ code {
   grid-template-columns: repeat(5, minmax(0, 1fr)) auto;
   min-height: 44px;
   border-bottom: 1px solid var(--line);
-  background: #07080cbf;
+  background: #f5f3eebf;
 }
 
 .context-chip {
@@ -648,7 +648,7 @@ code {
   gap: 24px;
   padding: 12px 32px;
   border-bottom: 1px solid var(--line);
-  background: linear-gradient(90deg, #6de1d20a, transparent 60%);
+  background: linear-gradient(90deg, #0e7c6e0a, transparent 60%);
 }
 
 .first-run-copy {
@@ -713,13 +713,13 @@ code {
 
 .demo-banner {
   justify-content: space-between;
-  border-color: #6de1d233;
-  background: #6de1d208;
+  border-color: #0e7c6e33;
+  background: #0e7c6e08;
 }
 
 .operation-banner {
-  border-color: #b8f7a533;
-  background: #b8f7a508;
+  border-color: #1f6b1433;
+  background: #1f6b1408;
 }
 
 .operation-banner svg {
@@ -729,8 +729,8 @@ code {
 
 .error-banner {
   justify-content: space-between;
-  border-color: #ff8a6b44;
-  background: #ff8a6b10;
+  border-color: #c8421a44;
+  background: #c8421a10;
 }
 
 .error-banner-message,
@@ -747,13 +747,13 @@ code {
 }
 
 .notice-info {
-  border-color: #6de1d233;
-  background: #6de1d208;
+  border-color: #0e7c6e33;
+  background: #0e7c6e08;
 }
 
 .notice-warn {
-  border-color: #f6b06b33;
-  background: #f6b06b0d;
+  border-color: #9d5a1433;
+  background: #9d5a140d;
 }
 
 /* Surface layout */
@@ -964,7 +964,7 @@ code {
 }
 
 .primary-button:hover {
-  background: #88ecdf;
+  background: #1a9385;
 }
 
 .secondary-button:hover,
@@ -1148,22 +1148,22 @@ code {
 
 .status-success,
 .risk-pass {
-  border-color: #b8f7a544;
-  background: #b8f7a510;
+  border-color: #1f6b1444;
+  background: #1f6b1410;
   color: var(--signed);
 }
 
 .status-warning,
 .risk-warn {
-  border-color: #f6b06b44;
-  background: #f6b06b10;
+  border-color: #9d5a1444;
+  background: #9d5a1410;
   color: var(--amber);
 }
 
 .status-danger,
 .risk-fail {
-  border-color: #ff8a6b44;
-  background: #ff8a6b10;
+  border-color: #c8421a44;
+  background: #c8421a10;
   color: var(--signal);
 }
 
@@ -1313,7 +1313,7 @@ code {
 .trace-card.active,
 .model-chip.active {
   border-left-color: var(--aura-3);
-  background: linear-gradient(90deg, #6de1d20a, transparent 80%);
+  background: linear-gradient(90deg, #0e7c6e0a, transparent 80%);
 }
 
 .tool-head,
@@ -1591,8 +1591,8 @@ code {
 }
 
 .result-fail {
-  border-color: #ff8a6b44;
-  background: #ff8a6b08;
+  border-color: #c8421a44;
+  background: #c8421a08;
 }
 
 .result-fail svg {
@@ -1792,7 +1792,7 @@ code {
   justify-items: center;
   padding: 36px 24px;
   border-style: dashed;
-  background: linear-gradient(180deg, transparent, #6de1d206 60%, transparent);
+  background: linear-gradient(180deg, transparent, #0e7c6e06 60%, transparent);
   text-align: center;
 }
 
@@ -1831,7 +1831,7 @@ code {
   display: grid;
   place-items: start center;
   padding: 10vh 14px 14px;
-  background: #07080cb8;
+  background: #1a181526;
   backdrop-filter: blur(8px);
 }
 
@@ -1839,7 +1839,7 @@ code {
 .export-modal {
   width: min(720px, 100%);
   border: 1px solid var(--line-strong);
-  background: #07080cf2;
+  background: #f5f3eef2;
   box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.86);
 }
 
@@ -1940,11 +1940,11 @@ textarea:focus-visible {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #ffffff14;
+  background: #1a181514;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #ffffff22;
+  background: #1a181522;
 }
 
 @keyframes spin {

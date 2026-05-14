@@ -134,15 +134,15 @@ function StudioMark({ size = 32 }: { size?: number }) {
     <svg className="studio-mark" width={size} height={size} viewBox="0 0 36 36" aria-hidden="true">
       <defs>
         <radialGradient id="studio-mark-glow" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#6de1d2" stopOpacity="0.55" />
-          <stop offset="100%" stopColor="#6de1d2" stopOpacity="0" />
+          <stop offset="0%" stopColor="#0e7c6e" stopOpacity="0.55" />
+          <stop offset="100%" stopColor="#0e7c6e" stopOpacity="0" />
         </radialGradient>
       </defs>
       <circle cx="18" cy="18" r="16" fill="url(#studio-mark-glow)" />
-      <circle cx="18" cy="18" r="13" fill="none" stroke="#ece6d622" />
-      <circle cx="18" cy="18" r="9.5" fill="none" stroke="#6de1d266" strokeDasharray="1.5 2.5" />
-      <circle cx="18" cy="18" r="3.5" fill="#ece6d6" />
-      <circle cx="18" cy="18" r="1.5" fill="#6de1d2" />
+      <circle cx="18" cy="18" r="13" fill="none" stroke="#1a181522" />
+      <circle cx="18" cy="18" r="9.5" fill="none" stroke="#0e7c6e66" strokeDasharray="1.5 2.5" />
+      <circle cx="18" cy="18" r="3.5" fill="#1a1815" />
+      <circle cx="18" cy="18" r="1.5" fill="#0e7c6e" />
     </svg>
   );
 }
