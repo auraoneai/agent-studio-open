@@ -198,8 +198,7 @@ code {
 .studio-shell.aura-ide-root {
   position: relative;
   z-index: 1;
-  display: flex;
-  align-items: flex-start;
+  display: block;
   width: 100%;
   height: auto;
   min-height: 100vh;
@@ -226,13 +225,15 @@ code {
 /* Sidebar */
 
 .sidebar {
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  z-index: 20;
   display: flex;
   flex-direction: column;
   width: var(--as-sidebar-width);
   min-width: var(--as-sidebar-width);
-  height: 100vh;
+  height: 100dvh;
   border-right: 1px solid var(--line);
   background: var(--void);
 }
@@ -282,7 +283,9 @@ code {
 
 .sidebar nav {
   display: grid;
+  flex: 1 1 auto;
   gap: 0;
+  min-height: 0;
   padding: 14px 0;
   overflow-y: auto;
 }
@@ -442,6 +445,8 @@ code {
   flex-direction: column;
   flex: 1 1 auto;
   min-width: 0;
+  min-height: 100vh;
+  margin-left: var(--as-sidebar-width);
 }
 
 .topbar {
@@ -2031,6 +2036,7 @@ textarea:focus-visible {
 
   .sidebar {
     position: static;
+    z-index: auto;
     width: 100%;
     max-width: 100vw;
     min-width: 0;
@@ -2046,6 +2052,7 @@ textarea:focus-visible {
   .sidebar nav {
     display: flex;
     flex-flow: row nowrap;
+    flex: 0 0 auto;
     gap: 8px;
     width: 100%;
     min-width: 0;
@@ -2102,6 +2109,11 @@ textarea:focus-visible {
     grid-template-columns: 1fr;
     flex: 0 0 auto;
     padding: 12px 14px;
+  }
+
+  .workbench {
+    min-height: 0;
+    margin-left: 0;
   }
 
   .topbar-actions {

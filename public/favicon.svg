@@ -7,6 +7,8 @@
       <stop offset="100%" stop-color="#f5f3ee" />
     </radialGradient>
   </defs>
+  <rect width="64" height="64" rx="14" fill="#f5f3ee" />
+  <circle cx="32" cy="32" r="29" fill="#fffef9" />
   <circle cx="32" cy="32" r="28" fill="url(#studio-mark-bg)" />
   <circle cx="32" cy="32" r="27" fill="none" stroke="#1a1815" stroke-opacity="0.09" stroke-width="2" />
   <circle
