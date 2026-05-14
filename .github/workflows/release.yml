@@ -1,0 +1,167 @@
+name: Agent Studio Open Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version without leading v"
+        required: true
+        default: "0.1.0"
+        type: string
+      channel:
+        description: "Release channel"
+        required: true
+        default: "stable"
+        type: choice
+        options:
+          - stable
+          - beta
+          - nightly
+
+permissions:
+  contents: write
+
+env:
+  NODE_VERSION: "20"
+  PNPM_VERSION: "10.33.2"
+
+jobs:
+  build:
+    name: Build ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS arm64 DMG
+            os: macos-14
+            artifact_name: agent-studio-open-macos
+            artifact_path: desktop/src-tauri/target/release/bundle/dmg/*.dmg
+          - name: Windows x64 MSI
+            os: windows-2022
+            artifact_name: agent-studio-open-windows
+            artifact_path: desktop/src-tauri/target/release/bundle/msi/*.msi
+          - name: Linux x64 packages
+            os: ubuntu-24.04
+            artifact_name: agent-studio-open-linux
+            artifact_path: |
+              desktop/src-tauri/target/release/bundle/appimage/*.AppImage
+              desktop/src-tauri/target/release/bundle/deb/*.deb
+              desktop/src-tauri/target/release/bundle/rpm/*.rpm
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Linux Tauri and sandbox dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            bubblewrap \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            rpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: Renderer tests
+        run: pnpm test -- --run
+
+      - name: CLI tests
+        shell: bash
+        run: |
+          PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 \
+          PYTHONPATH=cli/src:vendor/mcp-risk-linter/src:vendor/a2a-contract-test/src:vendor/tool-call-replay/src:vendor/agent-trace-card/src:vendor/otel-eval-bridge/src \
+          python -m pytest -q cli/tests
+
+      - name: Desktop Rust tests
+        run: cargo test --manifest-path desktop/src-tauri/Cargo.toml
+
+      - name: Linux bubblewrap execution smoke
+        if: runner.os == 'Linux'
+        run: |
+          bwrap \
+            --ro-bind /usr /usr \
+            --ro-bind /bin /bin \
+            --ro-bind /lib /lib \
+            --ro-bind /lib64 /lib64 \
+            --proc /proc \
+            --dev /dev \
+            --tmpfs /tmp \
+            --unshare-all \
+            python3 -c 'print("bubblewrap-ok")'
+
+      - name: Build Tauri bundles
+        run: pnpm exec tauri build
+
+      - name: Packaged startup smoke
+        run: pnpm run test:packaged-startup -- --json --no-build
+
+      - name: Generate artifact checksums
+        shell: bash
+        run: |
+          mkdir -p release-checksums
+          find desktop/src-tauri/target/release/bundle -type f \
+            \( -name "*.dmg" -o -name "*.msi" -o -name "*.AppImage" -o -name "*.deb" -o -name "*.rpm" \) \
+            -print0 | sort -z | xargs -0 shasum -a 256 > release-checksums/SHA256SUMS
+          cat release-checksums/SHA256SUMS
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: |
+            ${{ matrix.artifact_path }}
+            release-checksums/SHA256SUMS
+          if-no-files-found: error
+
+  publish-draft:
+    name: Publish draft release
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist/artifacts
+
+      - name: Flatten artifacts
+        run: |
+          mkdir -p dist/release
+          find dist/artifacts -type f \
+            \( -name "*.dmg" -o -name "*.msi" -o -name "*.AppImage" -o -name "*.deb" -o -name "*.rpm" -o -name "SHA256SUMS" \) \
+            -exec cp {} dist/release/ \;
+          cd dist/release
+          find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 shasum -a 256 > SHA256SUMS
+
+      - name: Create or update draft GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+          CHANNEL: ${{ inputs.channel }}
+        run: |
+          tag="v${VERSION}"
+          title="Agent Studio Open ${VERSION} (${CHANNEL})"
+          notes="Draft ${CHANNEL} release built from the public Agent Studio Open repository. macOS artifacts are ad-hoc signed by Tauri config unless Developer ID secrets are added."
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" dist/release/* --clobber
+          else
+            gh release create "$tag" dist/release/* --draft --title "$title" --notes "$notes"
+          fi
