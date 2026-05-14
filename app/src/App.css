@@ -68,8 +68,10 @@ html,
 body {
   margin: 0;
   min-width: 320px;
-  min-height: 100vh;
-  overflow-x: hidden;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  overflow: hidden;
   background: var(--void);
   color: var(--bone);
   font-family: "JetBrains Mono", ui-monospace, monospace;
@@ -77,6 +79,13 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   text-rendering: geometricPrecision;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 body::before {
@@ -200,9 +209,9 @@ code {
   z-index: 1;
   display: block;
   width: 100%;
-  height: auto;
-  min-height: 100vh;
-  overflow: visible;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
   grid-template-rows: none;
   grid-template-columns: none;
   background: var(--void);
@@ -445,8 +454,11 @@ code {
   flex-direction: column;
   flex: 1 1 auto;
   min-width: 0;
-  min-height: 100vh;
+  height: 100dvh;
+  min-height: 0;
   margin-left: var(--as-sidebar-width);
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .topbar {
@@ -2021,12 +2033,24 @@ textarea:focus-visible {
 }
 
 @media (max-width: 1020px) {
+  html,
+  body,
+  #root {
+    height: auto;
+    min-height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
   .studio-shell.aura-ide-root {
     display: flex;
     flex-direction: column;
     width: 100%;
+    height: auto;
+    min-height: 100vh;
     max-width: 100vw;
     overflow-x: hidden;
+    overflow-y: visible;
     grid-template-columns: 1fr;
   }
 
