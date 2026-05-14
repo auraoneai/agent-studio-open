@@ -131,18 +131,26 @@ const surfaceCommands: Array<{ id: string; title: string; surface: Surface; key:
 
 function StudioMark({ size = 32 }: { size?: number }) {
   return (
-    <svg className="studio-mark" width={size} height={size} viewBox="0 0 36 36" aria-hidden="true">
+    <svg
+      className="studio-mark"
+      width={size}
+      height={size}
+      viewBox="0 0 36 36"
+      aria-hidden="true"
+    >
       <defs>
-        <radialGradient id="studio-mark-glow" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#0e7c6e" stopOpacity="0.55" />
-          <stop offset="100%" stopColor="#0e7c6e" stopOpacity="0" />
+        <radialGradient id="studio-mark-glow" cx="50%" cy="50%" r="58%">
+          <stop offset="0%" stopColor="#d8eee7" />
+          <stop offset="52%" stopColor="#d8eee7" />
+          <stop offset="100%" stopColor="#f5f3ee" />
         </radialGradient>
       </defs>
       <circle cx="18" cy="18" r="16" fill="url(#studio-mark-glow)" />
-      <circle cx="18" cy="18" r="13" fill="none" stroke="#1a181522" />
-      <circle cx="18" cy="18" r="9.5" fill="none" stroke="#0e7c6e66" strokeDasharray="1.5 2.5" />
-      <circle cx="18" cy="18" r="3.5" fill="#1a1815" />
-      <circle cx="18" cy="18" r="1.5" fill="#0e7c6e" />
+      <circle cx="18" cy="18" r="15.4" fill="none" stroke="#1a181516" />
+      <circle cx="18" cy="18" r="10.5" fill="none" stroke="#0e7c6e55" strokeDasharray="1.2 2.2" />
+      <circle cx="18" cy="18" r="6.25" fill="#eaf4ef" stroke="#0e7c6e40" />
+      <circle cx="18" cy="18" r="3.35" fill="#1a1815" />
+      <circle cx="18" cy="18" r="1.35" fill="#0e7c6e" />
     </svg>
   );
 }
@@ -546,7 +554,7 @@ export function App() {
     <div className="studio-shell aura-ide-root" data-theme={auraTheme}>
       <aside className="sidebar" aria-label="Agent Studio Open navigation">
         <div className="brand">
-          <StudioMark />
+          <StudioMark size={30} />
           <div className="brand-text">
             <strong>Agent Studio</strong>
             <span className="sr-only">Agent Studio Open</span>
@@ -554,8 +562,8 @@ export function App() {
               {demoMode
                 ? "Hosted demo"
                 : state.edition === "desktop"
-                  ? "Desktop IDE · v0.8.4"
-                  : "Browser · v0.8.4"}
+                  ? "Desktop IDE"
+                  : "Browser preview"}
             </span>
           </div>
         </div>

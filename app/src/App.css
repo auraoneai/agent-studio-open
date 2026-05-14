@@ -39,7 +39,7 @@
   --ag-font-sans: "JetBrains Mono", ui-monospace, monospace;
   --ag-font-mono: "JetBrains Mono", ui-monospace, monospace;
 
-  --as-sidebar-width: 232px;
+  --as-sidebar-width: 260px;
   --as-topbar-height: 64px;
   --as-control-height: 32px;
   --as-text-xs: 11px;
@@ -230,6 +230,8 @@ code {
   top: 0;
   display: flex;
   flex-direction: column;
+  width: var(--as-sidebar-width);
+  min-width: var(--as-sidebar-width);
   height: 100vh;
   border-right: 1px solid var(--line);
   background: var(--void);
@@ -238,42 +240,44 @@ code {
 .brand {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 20px 22px 18px;
+  gap: 14px;
+  min-height: 72px;
+  padding: 17px 20px 16px;
   border-bottom: 1px solid var(--line);
 }
 
 .studio-mark {
   flex: 0 0 auto;
   display: block;
+  width: 30px;
+  height: 30px;
 }
 
 .brand-text {
   display: grid;
+  flex: 1 1 auto;
   min-width: 0;
-  line-height: 1.15;
+  gap: 3px;
+  line-height: 1;
 }
 
 .brand-text strong {
-  overflow: hidden;
+  display: block;
   color: var(--bone);
   font-family: "Instrument Serif", "Source Serif 4", Georgia, serif;
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 400;
   letter-spacing: 0;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.05;
 }
 
 .brand-text span:not(.sr-only) {
-  overflow: hidden;
   margin-top: 2px;
   color: var(--bone-faint);
-  font-size: 10.5px;
+  font-size: 9.5px;
   letter-spacing: 0.08em;
+  line-height: 1.2;
   text-transform: uppercase;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .sidebar nav {
