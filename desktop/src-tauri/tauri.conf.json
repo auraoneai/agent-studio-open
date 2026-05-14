@@ -21,12 +21,23 @@
     ],
     "security": {
       "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' data: blob:; connect-src 'self' https://updates.auraone.ai https://updates2.auraone.ai https://intake.auraone.ai https://o.auraone.ai https://sentry.io http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:* wss:; frame-src 'none'; object-src 'none'; base-uri 'self'",
-      "capabilities": ["default"]
+      "capabilities": [
+        "default"
+      ]
     }
   },
   "bundle": {
     "active": true,
-    "targets": ["dmg", "msi", "appimage", "deb", "rpm"],
+    "targets": [
+      "dmg",
+      "msi",
+      "appimage",
+      "deb",
+      "rpm"
+    ],
+    "macOS": {
+      "signingIdentity": "-"
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -49,7 +60,9 @@
     },
     "deep-link": {
       "desktop": {
-        "schemes": ["auraone"]
+        "schemes": [
+          "auraone"
+        ]
       }
     }
   }

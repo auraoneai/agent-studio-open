@@ -45,13 +45,23 @@ class OTLPHandler(BaseHTTPRequestHandler):
             return
         body = self.rfile.read(length)
         content_type = self.headers.get("content-type", "")
-        suffix = ".json" if "json" in content_type else ".bin"
+        if "json" in content_type:
+            suffix = ".json"
+            fmt = "otlp-json"
+        elif "proto" in content_type or "grpc" in content_type or "octet-stream" in content_type:
+            suffix = ".bin"
+            fmt = "otlp-proto"
+        else:
+            self.send_error(415, "unsupported OTLP content-type")
+            return
         tmp = self.store_path.with_suffix(suffix)
-        fmt = "otlp-json" if suffix == ".json" else "otlp-proto"
         try:
             tmp.write_bytes(body)
             case = load_replay_case(tmp, fmt)
             session_id = case_to_ast(case, self.store_path, fmt)
+        except Exception:
+            self.send_error(400, "invalid OTLP payload")
+            return
         finally:
             tmp.unlink(missing_ok=True)
         type(self).received += 1

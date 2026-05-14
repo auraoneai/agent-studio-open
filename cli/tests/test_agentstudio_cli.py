@@ -324,6 +324,30 @@ def test_otlp_http_receiver_rejects_unauthorized_oversized_and_rate_limited_payl
         )
         with pytest_raises_http(413):
             urllib.request.urlopen(oversized, timeout=10)
+
+        malformed = urllib.request.Request(
+            f"http://127.0.0.1:{port}/v1/traces",
+            data=b"{bad json",
+            headers={
+                "content-type": "application/json",
+                "authorization": "Bearer receiver-secret",
+            },
+            method="POST",
+        )
+        with pytest_raises_http(400):
+            urllib.request.urlopen(malformed, timeout=10)
+
+        unsupported_type = urllib.request.Request(
+            f"http://127.0.0.1:{port}/v1/traces",
+            data=b"trace",
+            headers={
+                "content-type": "text/plain",
+                "authorization": "Bearer receiver-secret",
+            },
+            method="POST",
+        )
+        with pytest_raises_http(415):
+            urllib.request.urlopen(unsupported_type, timeout=10)
     finally:
         httpd.shutdown()
         OTLPHandler.max_payload_bytes = DEFAULT_MAX_OTLP_PAYLOAD_BYTES
