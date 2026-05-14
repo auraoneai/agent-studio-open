@@ -7,21 +7,20 @@
       <stop offset="100%" stop-color="#f5f3ee" />
     </radialGradient>
   </defs>
-  <rect width="64" height="64" fill="#f5f3ee" />
-  <circle cx="32" cy="32" r="31" fill="#fffef9" />
-  <circle cx="32" cy="32" r="29.5" fill="url(#studio-mark-bg)" />
-  <circle cx="32" cy="32" r="28.5" fill="none" stroke="#0e7c6e" stroke-opacity="0.18" stroke-width="1.4" />
+  <rect width="64" height="64" fill="#fffef9" />
+  <circle cx="32" cy="32" r="23.5" fill="url(#studio-mark-bg)" />
+  <circle cx="32" cy="32" r="22.8" fill="none" stroke="#0e7c6e" stroke-opacity="0.22" stroke-width="1.2" />
   <circle
     cx="32"
     cy="32"
-    r="19.5"
+    r="15.5"
     fill="none"
     stroke="#0e7c6e"
     stroke-opacity="0.34"
     stroke-width="1.6"
     stroke-dasharray="2.2 4.1"
   />
-  <circle cx="32" cy="32" r="11.5" fill="#eaf4ef" stroke="#0e7c6e" stroke-opacity="0.25" stroke-width="1.4" />
-  <circle cx="32" cy="32" r="6.1" fill="#1a1815" />
-  <circle cx="32" cy="32" r="2.45" fill="#0e7c6e" />
+  <circle cx="32" cy="32" r="9.25" fill="#eaf4ef" stroke="#0e7c6e" stroke-opacity="0.25" stroke-width="1.2" />
+  <circle cx="32" cy="32" r="4.9" fill="#1a1815" />
+  <circle cx="32" cy="32" r="1.95" fill="#0e7c6e" />
 </svg>
