@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { performance } from "node:perf_hooks";
@@ -34,25 +34,30 @@ if (options.build) {
   });
 }
 
-const executable = resolvePackagedExecutable();
+const resolvedExecutable = resolvePackagedExecutable();
+const executable = resolvedExecutable.executable;
 const samples = [];
-for (let runIndex = 0; runIndex < options.runs; runIndex += 1) {
-  const started = performance.now();
-  const result = spawnSync(executable, [probeFlag], {
-    cwd: repoRoot,
-    encoding: "utf8",
-    timeout: 30_000,
-  });
-  const elapsedMs = performance.now() - started;
-  if (result.status !== 0) {
-    fail(
-      result.stderr || result.stdout || `startup probe failed: ${executable}`,
-    );
+try {
+  for (let runIndex = 0; runIndex < options.runs; runIndex += 1) {
+    const started = performance.now();
+    const result = spawnSync(executable, [probeFlag], {
+      cwd: repoRoot,
+      encoding: "utf8",
+      timeout: 30_000,
+    });
+    const elapsedMs = performance.now() - started;
+    if (result.status !== 0) {
+      fail(
+        result.stderr || result.stdout || `startup probe failed: ${executable}`,
+      );
+    }
+    if (!result.stdout.includes('"probe":"packaged-startup"')) {
+      fail(`startup probe emitted unexpected output: ${result.stdout.trim()}`);
+    }
+    samples.push(elapsedMs);
   }
-  if (!result.stdout.includes('"probe":"packaged-startup"')) {
-    fail(`startup probe emitted unexpected output: ${result.stdout.trim()}`);
-  }
-  samples.push(elapsedMs);
+} finally {
+  resolvedExecutable.cleanup?.();
 }
 
 const output = {
@@ -114,48 +119,108 @@ function resolvePackagedExecutable() {
   const platform = os.platform();
   const candidates =
     platform === "darwin"
-      ? [
-          path.join(
-            tauriRoot,
-            "target",
-            "release",
-            "bundle",
-            "macos",
-            "Agent Studio Open.app",
-            "Contents",
-            "MacOS",
-            "agent-studio-open",
-          ),
-        ]
+      ? darwinCandidates()
       : platform === "win32"
-        ? [
-            path.join(
-              tauriRoot,
-              "target",
-              "release",
-              "bundle",
-              "msi",
-              "agent-studio-open.exe",
-            ),
-            path.join(tauriRoot, "target", "release", "agent-studio-open.exe"),
-          ]
-        : [
-            path.join(
-              tauriRoot,
-              "target",
-              "release",
-              "bundle",
-              "appimage",
-              "agent-studio-open.AppImage",
-            ),
-            path.join(tauriRoot, "target", "release", "agent-studio-open"),
-          ];
+        ? windowsCandidates()
+        : linuxCandidates();
 
   const found = candidates.find((candidate) => existsSync(candidate));
   if (!found) {
+    if (platform === "darwin") {
+      return mountDmgExecutable();
+    }
     fail(`no packaged executable found; checked ${candidates.join(", ")}`);
   }
-  return found;
+  return { executable: found };
+}
+
+function darwinCandidates() {
+  return [
+    path.join(
+      tauriRoot,
+      "target",
+      "release",
+      "bundle",
+      "macos",
+      "Agent Studio Open.app",
+      "Contents",
+      "MacOS",
+      "agent-studio-open",
+    ),
+  ];
+}
+
+function windowsCandidates() {
+  return [
+    path.join(
+      tauriRoot,
+      "target",
+      "release",
+      "bundle",
+      "msi",
+      "agent-studio-open.exe",
+    ),
+    path.join(tauriRoot, "target", "release", "agent-studio-open.exe"),
+  ];
+}
+
+function linuxCandidates() {
+  return [
+    ...bundleFiles("appimage", ".AppImage"),
+    path.join(tauriRoot, "target", "release", "agent-studio-open"),
+  ];
+}
+
+function bundleFiles(bundleDir, suffix) {
+  const directory = path.join(tauriRoot, "target", "release", "bundle", bundleDir);
+  if (!existsSync(directory)) {
+    return [];
+  }
+  return readdirSync(directory)
+    .filter((entry) => entry.endsWith(suffix))
+    .sort()
+    .map((entry) => path.join(directory, entry));
+}
+
+function mountDmgExecutable() {
+  const [dmg] = bundleFiles("dmg", ".dmg");
+  if (!dmg) {
+    fail(
+      `no packaged executable found; checked ${darwinCandidates().join(", ")} and no DMG was found`,
+    );
+  }
+  const mountPoint = mkdtempSync(path.join(os.tmpdir(), "agent-studio-open-dmg-"));
+  const attach = spawnSync(
+    "hdiutil",
+    ["attach", dmg, "-mountpoint", mountPoint, "-nobrowse", "-quiet"],
+    { encoding: "utf8" },
+  );
+  if (attach.status !== 0) {
+    rmSync(mountPoint, { recursive: true, force: true });
+    fail(attach.stderr || attach.stdout || `failed to mount ${dmg}`);
+  }
+  const executable = path.join(
+    mountPoint,
+    "Agent Studio Open.app",
+    "Contents",
+    "MacOS",
+    "agent-studio-open",
+  );
+  if (!existsSync(executable)) {
+    cleanupDmgMount(mountPoint);
+    fail(`mounted DMG does not contain expected executable: ${executable}`);
+  }
+  return {
+    executable,
+    cleanup: () => cleanupDmgMount(mountPoint),
+  };
+}
+
+function cleanupDmgMount(mountPoint) {
+  spawnSync("hdiutil", ["detach", mountPoint, "-quiet"], {
+    encoding: "utf8",
+  });
+  rmSync(mountPoint, { recursive: true, force: true });
 }
 
 function round(value) {
