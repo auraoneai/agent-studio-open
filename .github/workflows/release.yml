@@ -104,7 +104,7 @@ jobs:
       - name: Linux bubblewrap execution smoke
         if: runner.os == 'Linux'
         run: |
-          bwrap \
+          sudo bwrap \
             --ro-bind /usr /usr \
             --ro-bind /bin /bin \
             --ro-bind /lib /lib \
