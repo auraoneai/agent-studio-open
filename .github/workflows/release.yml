@@ -20,6 +20,8 @@ on:
 
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 
 env:
   NODE_VERSION: "20"
@@ -30,6 +32,7 @@ jobs:
     name: Build ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
+    environment: release
     strategy:
       fail-fast: false
       matrix:
@@ -124,6 +127,80 @@ jobs:
       - name: Packaged startup smoke
         run: pnpm run test:packaged-startup -- --json --no-build
 
+      - name: Verify release signing custody
+        shell: bash
+        env:
+          AURAONE_APPLE_ID: ${{ secrets.AURAONE_APPLE_ID }}
+          AURAONE_APPLE_TEAM_ID: ${{ secrets.AURAONE_APPLE_TEAM_ID }}
+          AURAONE_APPLE_APP_PASSWORD: ${{ secrets.AURAONE_APPLE_APP_PASSWORD }}
+          AURAONE_NOTARY_KEY_P8: ${{ secrets.AURAONE_NOTARY_KEY_P8 }}
+          AURAONE_NOTARY_KEY_ID: ${{ secrets.AURAONE_NOTARY_KEY_ID }}
+          AURAONE_NOTARY_ISSUER_ID: ${{ secrets.AURAONE_NOTARY_ISSUER_ID }}
+          AURAONE_WINDOWS_CERT_THUMBPRINT: ${{ secrets.AURAONE_WINDOWS_CERT_THUMBPRINT }}
+          AURAONE_WINDOWS_PFX_PATH: ${{ secrets.AURAONE_WINDOWS_PFX_PATH }}
+          AURAONE_WINDOWS_PFX_PASSWORD: ${{ secrets.AURAONE_WINDOWS_PFX_PASSWORD }}
+          AURAONE_GPG_KEY_ID: ${{ secrets.AURAONE_GPG_KEY_ID }}
+          AURAONE_RELEASE_GPG_PRIVATE_KEY: ${{ secrets.AURAONE_RELEASE_GPG_PRIVATE_KEY }}
+        run: |
+          case "${{ runner.os }}" in
+            macOS)
+              if [ -n "$AURAONE_NOTARY_KEY_P8" ]; then
+                test -n "$AURAONE_NOTARY_KEY_ID"
+                test -n "$AURAONE_NOTARY_ISSUER_ID"
+              else
+                test -n "$AURAONE_APPLE_ID"
+                test -n "$AURAONE_APPLE_TEAM_ID"
+                test -n "$AURAONE_APPLE_APP_PASSWORD"
+              fi
+              ;;
+            Windows)
+              test -n "${AURAONE_WINDOWS_CERT_THUMBPRINT}${AURAONE_WINDOWS_PFX_PATH}"
+              if [ -n "$AURAONE_WINDOWS_PFX_PATH" ]; then
+                test -n "$AURAONE_WINDOWS_PFX_PASSWORD"
+              fi
+              ;;
+            Linux)
+              test -n "$AURAONE_GPG_KEY_ID"
+              test -n "$AURAONE_RELEASE_GPG_PRIVATE_KEY"
+              ;;
+          esac
+
+      - name: Notarize macOS artifact
+        if: runner.os == 'macOS'
+        shell: bash
+        env:
+          AURAONE_APPLE_ID: ${{ secrets.AURAONE_APPLE_ID }}
+          AURAONE_APPLE_TEAM_ID: ${{ secrets.AURAONE_APPLE_TEAM_ID }}
+          AURAONE_APPLE_APP_PASSWORD: ${{ secrets.AURAONE_APPLE_APP_PASSWORD }}
+          AURAONE_NOTARY_KEY_P8: ${{ secrets.AURAONE_NOTARY_KEY_P8 }}
+          AURAONE_NOTARY_KEY_ID: ${{ secrets.AURAONE_NOTARY_KEY_ID }}
+          AURAONE_NOTARY_ISSUER_ID: ${{ secrets.AURAONE_NOTARY_ISSUER_ID }}
+        run: scripts/sign-and-notarize-macos.sh desktop/src-tauri/target/release/bundle
+
+      - name: Sign Windows artifact
+        if: runner.os == 'Windows'
+        shell: pwsh
+        env:
+          AURAONE_WINDOWS_CERT_THUMBPRINT: ${{ secrets.AURAONE_WINDOWS_CERT_THUMBPRINT }}
+          AURAONE_WINDOWS_PFX_PATH: ${{ secrets.AURAONE_WINDOWS_PFX_PATH }}
+          AURAONE_WINDOWS_PFX_PASSWORD: ${{ secrets.AURAONE_WINDOWS_PFX_PASSWORD }}
+        run: scripts/sign-windows.ps1 -ArtifactDirectory desktop/src-tauri/target/release/bundle
+
+      - name: Import Linux release signing key
+        if: runner.os == 'Linux'
+        shell: bash
+        env:
+          AURAONE_RELEASE_GPG_PRIVATE_KEY: ${{ secrets.AURAONE_RELEASE_GPG_PRIVATE_KEY }}
+        run: |
+          printf '%s' "$AURAONE_RELEASE_GPG_PRIVATE_KEY" | gpg --batch --import
+
+      - name: Sign Linux artifacts
+        if: runner.os == 'Linux'
+        shell: bash
+        env:
+          AURAONE_GPG_KEY_ID: ${{ secrets.AURAONE_GPG_KEY_ID }}
+        run: scripts/sign-linux.sh desktop/src-tauri/target/release/bundle
+
       - name: Generate artifact checksums
         shell: bash
         run: |
@@ -154,6 +231,7 @@ jobs:
     name: Publish draft release
     needs: build
     runs-on: ubuntu-latest
+    environment: release
     timeout-minutes: 15
     steps:
       - uses: actions/download-artifact@v4
@@ -164,12 +242,29 @@ jobs:
         run: |
           mkdir -p dist/release
           find dist/artifacts -type f \
-            \( -name "*.dmg" -o -name "*.msi" -o -name "*.AppImage" -o -name "*.deb" -o -name "*.rpm" -o -name "SHA256SUMS" \) \
+            \( -name "*.dmg" -o -name "*.msi" -o -name "*.AppImage" -o -name "*.deb" -o -name "*.rpm" -o -name "*.asc" -o -name "*.sha256" -o -name "SHA256SUMS" \) \
             -exec cp {} dist/release/ \;
-          cd dist/release
-          find . -type f ! -name SHA256SUMS -print0 | sort -z | while IFS= read -r -d '' artifact; do
-            sha256sum "$artifact"
-          done > SHA256SUMS
+
+      - name: Import release signing key
+        shell: bash
+        env:
+          AURAONE_RELEASE_GPG_PRIVATE_KEY: ${{ secrets.AURAONE_RELEASE_GPG_PRIVATE_KEY }}
+        run: |
+          test -n "$AURAONE_RELEASE_GPG_PRIVATE_KEY"
+          printf '%s' "$AURAONE_RELEASE_GPG_PRIVATE_KEY" | gpg --batch --import
+
+      - name: Generate signed aggregate checksums
+        shell: bash
+        env:
+          AURAONE_GPG_KEY_ID: ${{ secrets.AURAONE_GPG_KEY_ID }}
+        run: |
+          test -n "$AURAONE_GPG_KEY_ID"
+          scripts/generate-checksums.sh dist/release
+
+      - name: Attest release artifacts
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: "dist/release/**"
 
       - name: Create or update draft GitHub release
         env:
@@ -180,7 +275,7 @@ jobs:
         run: |
           tag="v${VERSION}"
           title="Agent Studio Open ${VERSION} (${CHANNEL})"
-          notes="Draft ${CHANNEL} release built from the public Agent Studio Open repository. macOS artifacts are ad-hoc signed by Tauri config unless Developer ID secrets are added."
+          notes="Draft ${CHANNEL} release built from the public Agent Studio Open repository after release-custody checks. Windows and Linux artifacts require configured AuraOne signing secrets; SHA256SUMS.asc is generated from the hosted release GPG key."
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release upload "$tag" dist/release/* --clobber
           else
