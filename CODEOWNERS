@@ -1,0 +1,18 @@
+# Agent Studio Open ownership
+
+* @auraoneai/agent-studio-maintainers
+
+/.github/** @auraoneai/agent-studio-maintainers @auraoneai/security
+/CODEOWNERS @auraoneai/agent-studio-maintainers @auraoneai/security
+/SECURITY.md @auraoneai/agent-studio-maintainers @auraoneai/security
+/LICENSE @auraoneai/agent-studio-maintainers
+/scripts/** @auraoneai/agent-studio-maintainers @auraoneai/security
+/config/** @auraoneai/agent-studio-maintainers @auraoneai/security
+/crates/** @auraoneai/agent-studio-maintainers @auraoneai/security
+/desktop/** @auraoneai/agent-studio-maintainers @auraoneai/security
+/vendor/** @auraoneai/agent-studio-maintainers @auraoneai/security
+/app/** @auraoneai/agent-studio-maintainers
+/cli/** @auraoneai/agent-studio-maintainers
+/public/** @auraoneai/agent-studio-maintainers
+/vscode/** @auraoneai/agent-studio-maintainers
+/web/** @auraoneai/agent-studio-maintainers
