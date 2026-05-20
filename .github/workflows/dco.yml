@@ -1,0 +1,41 @@
+name: DCO
+
+on:
+  pull_request: {}
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  dco:
+    name: DCO / dco
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify Signed-off-by trailers
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          missing=0
+          while read -r commit; do
+            if [ -z "$commit" ]; then
+              continue
+            fi
+            if ! git log --format=%B -n 1 "$commit" | grep -Eiq '^Signed-off-by: .+ <[^>]+>$'; then
+              author="$(git log --format='%an <%ae>' -n 1 "$commit")"
+              echo "::error title=Missing DCO sign-off::Commit $commit by $author is missing a Signed-off-by trailer."
+              missing=1
+            fi
+          done < <(git rev-list --no-merges "$BASE_SHA..$HEAD_SHA")
+
+          if [ "$missing" -ne 0 ]; then
+            echo "Add a Developer Certificate of Origin trailer with: git commit --amend --signoff"
+            exit 1
+          fi
