@@ -102,8 +102,47 @@ fn source_repo_root() -> Option<PathBuf> {
 
 fn bundled_resources_dir() -> Option<PathBuf> {
     let exe = env::current_exe().ok()?;
-    let macos_dir = exe.parent()?;
-    let contents_dir = macos_dir.parent()?;
-    let resources = contents_dir.join("Resources");
-    resources.exists().then_some(resources)
+    candidate_resource_dirs_for_exe(&exe)
+        .into_iter()
+        .find(|path| path.exists())
+}
+
+fn candidate_resource_dirs_for_exe(exe: &Path) -> Vec<PathBuf> {
+    let mut candidates = Vec::new();
+    if let Some(exe_dir) = exe.parent() {
+        if let Some(contents_dir) = exe_dir.parent() {
+            candidates.push(contents_dir.join("Resources"));
+            candidates.push(contents_dir.join("lib").join("Agent Studio Open"));
+        }
+        candidates.push(exe_dir.join("resources"));
+    }
+    candidates
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn linux_package_resource_dir_is_discovered_from_bin_launcher() {
+        let candidates = candidate_resource_dirs_for_exe(Path::new("/usr/bin/agentstudio"));
+
+        assert!(candidates
+            .iter()
+            .any(|path| path == Path::new("/usr/lib/Agent Studio Open")));
+    }
+
+    #[test]
+    fn macos_package_resource_dir_is_still_first_candidate() {
+        let candidates = candidate_resource_dirs_for_exe(Path::new(
+            "/Applications/Agent Studio Open.app/Contents/MacOS/agentstudio",
+        ));
+
+        assert_eq!(
+            candidates.first(),
+            Some(&PathBuf::from(
+                "/Applications/Agent Studio Open.app/Contents/Resources"
+            ))
+        );
+    }
 }
