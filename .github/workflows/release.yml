@@ -254,6 +254,8 @@ jobs:
     environment: release
     timeout-minutes: 15
     steps:
+      - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v4
         with:
           path: dist/artifacts
@@ -315,3 +317,13 @@ jobs:
           else
             gh release create "$tag" dist/release/* --draft --title "$title" --notes "$notes"
           fi
+
+      - name: Publish update manifest checksums
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_R2_BUCKET: ${{ secrets.CLOUDFLARE_R2_BUCKET }}
+          AURAONE_R2_BUCKET: ${{ secrets.AURAONE_R2_BUCKET }}
+          VERSION: ${{ inputs.version }}
+          CHANNEL: ${{ inputs.channel }}
+        run: scripts/publish-update-manifest.sh "$VERSION" "$CHANNEL" dist/release
