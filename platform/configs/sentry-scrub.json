@@ -1,0 +1,31 @@
+{
+  "$schema": "https://schemas.auraone.ai/open-studio/sentry-scrub/v1.json",
+  "version": "1.0.0",
+  "rules": [
+    {
+      "id": "paths-posix",
+      "pattern": "/(?:Users|home)/[^\\s\\n\\r\\t]+",
+      "replacement": "<PATH>"
+    },
+    {
+      "id": "paths-windows",
+      "pattern": "[A-Za-z]:\\\\[^\\s\\n\\r\\t]+",
+      "replacement": "<PATH>"
+    },
+    {
+      "id": "hostnames",
+      "pattern": "\\b[A-Za-z0-9.-]+\\.[A-Za-z]{2,}\\b",
+      "replacement": "<HOSTNAME>"
+    },
+    {
+      "id": "openai-style-api-keys",
+      "pattern": "sk-[A-Za-z0-9_-]{16,}",
+      "replacement": "<SECRET>"
+    },
+    {
+      "id": "github-tokens",
+      "pattern": "gh[pousr]_[A-Za-z0-9_]{20,}",
+      "replacement": "<SECRET>"
+    }
+  ]
+}

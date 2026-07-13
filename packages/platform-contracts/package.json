@@ -1,0 +1,48 @@
+{
+  "name": "@auraone/platform-contracts",
+  "version": "0.3.0",
+  "description": "Runtime-neutral TypeScript contracts for trust, intake, telemetry, updates, and extensions in AuraOne Open Studio.",
+  "keywords": [
+    "auraone",
+    "open-studio",
+    "typescript",
+    "telemetry",
+    "privacy",
+    "updater",
+    "keychain",
+    "contracts"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/auraoneai/open-studio-platform.git",
+    "directory": "packages/platform-contracts"
+  },
+  "homepage": "https://github.com/auraoneai/open-studio-platform/tree/main/packages/platform-contracts#readme",
+  "bugs": {
+    "url": "https://github.com/auraoneai/open-studio-platform/issues"
+  },
+  "type": "module",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "type-check": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=20.19.5"
+  }
+}

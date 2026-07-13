@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.auraone.ai/open-studio/extension-hooks/v1.json",
+  "title": "AuraOne Open Studio platform extension hooks",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["platform_version", "product", "hooks"],
+  "properties": {
+    "platform_version": { "type": "string" },
+    "product": {
+      "enum": ["rubric-studio-open", "robotics-studio-open", "agent-studio-open"]
+    },
+    "hooks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "kind", "surface", "enabled_in"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9._-]*$" },
+          "kind": {
+            "enum": [
+              "mcp_transport",
+              "otlp_receiver",
+              "llm_gateway_provider",
+              "intake_payload_role",
+              "robotics_video_decode",
+              "robotics_dataset_stream",
+              "robotics_ros_adapter"
+            ]
+          },
+          "surface": {
+            "enum": ["desktop", "browser", "cli", "vscode"]
+          },
+          "enabled_in": {
+            "type": "array",
+            "items": { "enum": ["stable", "beta", "nightly"] },
+            "minItems": 1
+          }
+        }
+      }
+    }
+  }
+}

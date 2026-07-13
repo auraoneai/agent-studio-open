@@ -1,8 +1,25 @@
 {
-  "name": "agent-studio-open-vscode",
+  "name": "agent-studio-open",
   "displayName": "Agent Studio Open",
   "publisher": "auraone",
-  "version": "0.1.0",
+  "version": "0.2.0",
+  "license": "MIT",
+  "description": "Inspect MCP servers, compose tool calls, and deep-link Agent Studio Open workflows from VS Code.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/auraoneai/agent-studio-open.git"
+  },
+  "homepage": "https://agentstudio.auraone.ai/",
+  "bugs": {
+    "url": "https://github.com/auraoneai/agent-studio-open/issues"
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "LICENSE",
+    "package.json"
+  ],
   "engines": {
     "vscode": "^1.92.0"
   },

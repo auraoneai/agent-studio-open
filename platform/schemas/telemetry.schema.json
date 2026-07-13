@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.auraone.ai/open-studio/telemetry/v1.json",
+  "title": "AuraOne Open Studio telemetry event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "event_id",
+    "event_name",
+    "event_version",
+    "app",
+    "device",
+    "session_id",
+    "timestamp",
+    "payload"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://schemas.auraone.ai/open-studio/telemetry/v1.json"
+    },
+    "event_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "event_name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "event_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "app": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["flagship", "version", "channel"],
+      "properties": {
+        "flagship": {
+          "enum": [
+            "rubric-studio-open",
+            "robotics-studio-open",
+            "agent-studio-open"
+          ]
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$"
+        },
+        "channel": {
+          "enum": ["stable", "beta", "nightly"]
+        }
+      }
+    },
+    "device": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["install_id", "os", "os_version", "arch"],
+      "properties": {
+        "install_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "os": {
+          "enum": ["darwin", "windows", "linux"]
+        },
+        "os_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[0-9A-Za-z._ -]+$"
+        },
+        "arch": {
+          "enum": ["x86_64", "aarch64"]
+        }
+      }
+    },
+    "session_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "payload": {
+      "$ref": "#/$defs/safePayload"
+    }
+  },
+  "$defs": {
+    "safeString": {
+      "type": "string",
+      "maxLength": 256,
+      "not": {
+        "anyOf": [
+          { "pattern": "[/\\\\]" },
+          { "pattern": "([sS][kK]-|xox[baprs]-|AKIA|AIza|[aA][nN][tT][hH][rR][oO][pP][iI][cC]|[oO][pP][eE][nN][aA][iI]|api[_-]?[kK][eE][yY])" },
+          { "pattern": "([lL][oO][cC][aA][lL][hH][oO][sS][tT]|\\.local|\\.internal|\\.corp)" },
+          { "pattern": "^[0-9]{1,3}(\\.[0-9]{1,3}){3}$" }
+        ]
+      }
+    },
+    "safeScalar": {
+      "anyOf": [
+        { "$ref": "#/$defs/safeString" },
+        { "type": "number" },
+        { "type": "integer" },
+        { "type": "boolean" },
+        { "type": "null" }
+      ]
+    },
+    "safePayload": {
+      "type": "object",
+      "additionalProperties": {
+        "anyOf": [
+          { "$ref": "#/$defs/safeScalar" },
+          {
+            "type": "array",
+            "maxItems": 32,
+            "items": { "$ref": "#/$defs/safeScalar" }
+          },
+          {
+            "type": "object",
+            "maxProperties": 16,
+            "additionalProperties": { "$ref": "#/$defs/safeScalar" }
+          }
+        ]
+      },
+      "propertyNames": {
+        "not": {
+          "pattern": "([cC][oO][nN][tT][eE][nN][tT]|[tT][eE][xX][tT]|[pP][rR][oO][mM][pP][tT]|[pP][aA][tT][hH]|[hH][oO][sS][tT][nN][aA][mM][eE]|[sS][eE][rR][vV][eE][rR]|[tT][oO][oO][lL]|[aA][rR][gG][uU][mM][eE][nN][tT]|[rR][eE][sS][pP][oO][nN][sS][eE]|[eE][mM][aA][iI][lL]|[nN][aA][mM][eE]|[kK][eE][yY]|[sS][eE][cC][rR][eE][tT]|[tT][oO][kK][eE][nN])"
+        }
+      }
+    }
+  }
+}

@@ -11,15 +11,15 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
-OPEN_SOURCE_ROOT = ROOT.parents[1]
+VENDOR_ROOT = ROOT.parent / "vendor"
 DEFAULT_FIXTURE = ROOT / "tests" / "fixtures" / "mcp_stdio_server.py"
 PYTHONPATH_PARTS = [
     ROOT / "src",
-    OPEN_SOURCE_ROOT / "mcp-risk-linter" / "src",
-    OPEN_SOURCE_ROOT / "a2a-contract-test" / "src",
-    OPEN_SOURCE_ROOT / "tool-call-replay" / "src",
-    OPEN_SOURCE_ROOT / "agent-trace-card" / "src",
-    OPEN_SOURCE_ROOT / "otel-eval-bridge" / "src",
+    VENDOR_ROOT / "mcp-risk-linter" / "src",
+    VENDOR_ROOT / "a2a-contract-test" / "src",
+    VENDOR_ROOT / "tool-call-replay" / "src",
+    VENDOR_ROOT / "agent-trace-card" / "src",
+    VENDOR_ROOT / "otel-eval-bridge" / "src",
 ]
 
 

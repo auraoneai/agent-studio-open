@@ -11,7 +11,13 @@ const url = `http://127.0.0.1:${port}`;
 const server = spawn(
   "pnpm",
   ["--dir", new URL(".", appRoot).pathname, "exec", "vite", "--host", "127.0.0.1", "--port", String(port), "--strictPort"],
-  { stdio: ["ignore", "pipe", "pipe"] },
+  {
+    env: {
+      ...process.env,
+      VITE_AGENT_STUDIO_DEMO_MODE: "true",
+    },
+    stdio: ["ignore", "pipe", "pipe"],
+  },
 );
 
 try {
@@ -19,9 +25,17 @@ try {
   const browser = await chromium.launch();
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 960 } });
-    await page.goto(url, { waitUntil: "networkidle" });
-    await page.getByRole("button", { name: "Start" }).click();
+    await page.goto(url, { waitUntil: "domcontentloaded" });
+    await page.locator(".studio-shell").waitFor({ state: "visible" });
+    await page.waitForFunction(
+      () => document.documentElement.dataset.demo === "true",
+    );
+    const startButton = page.getByRole("button", { name: "Start" });
+    if (await startButton.isVisible()) {
+      await startButton.click();
+    }
     await page.getByRole("button", { name: "Compose" }).click();
+    await page.getByRole("heading", { name: "Compose tool call" }).waitFor();
 
     const samples = [];
     for (let index = 0; index < runs; index += 1) {
@@ -72,8 +86,12 @@ async function measureSendOverhead(page) {
     const started = performance.now();
     send.click();
     await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-    if (!document.body.textContent?.includes('"ok": true')) {
-      throw new Error("Send response did not render");
+    const bodyText = document.body.textContent ?? "";
+    if (
+      !bodyText.includes('"ok": false') ||
+      !bodyText.includes('"trace_id": "trace-not-recorded"')
+    ) {
+      throw new Error("Truthful send response did not render");
     }
     return performance.now() - started;
   });

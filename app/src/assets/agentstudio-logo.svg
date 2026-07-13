@@ -8,12 +8,5 @@
   <path d="M138 64V69.5H118.8V65.4C118.8 59.5 114.1 54.8 108.2 54.8H80.4C76.7 54.8 73.8 57.7 73.8 61.4C73.8 64.5 76 67.2 79 67.8L83.7 68.8L90 52H109.2C125.1 52 138 64.9 138 80.8V64Z" fill="#3AD8A4"/>
   <circle cx="55" cy="60" r="8" fill="#C8FF5E"/>
   <circle cx="138" cy="128" r="8" fill="#F5B94C"/>
-  <rect x="16.75" y="16.75" width="158.5" height="158.5" rx="33.25" stroke="url(#paint0_linear_144_12)" stroke-width="1.5"/>
-  <defs>
-    <linearGradient id="paint0_linear_144_12" x1="34" y1="28" x2="158" y2="166" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#7CD3FF"/>
-      <stop offset="0.54" stop-color="#3AD8A4"/>
-      <stop offset="1" stop-color="#F5B94C"/>
-    </linearGradient>
-  </defs>
+  <rect x="16.75" y="16.75" width="158.5" height="158.5" rx="33.25" stroke="#007582" stroke-width="1.5"/>
 </svg>

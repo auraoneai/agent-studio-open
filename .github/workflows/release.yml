@@ -6,7 +6,7 @@ on:
       version:
         description: "Release version without leading v"
         required: true
-        default: "0.1.0"
+        default: "0.2.0"
         type: string
       channel:
         description: "Release channel"
@@ -25,7 +25,7 @@ permissions:
 
 env:
   NODE_VERSION: "20"
-  PNPM_VERSION: "10.33.2"
+  PNPM_VERSION: "10.18.0"
 
 jobs:
   build:
@@ -122,7 +122,7 @@ jobs:
             python3 -c 'print("bubblewrap-ok")'
 
       - name: Build Tauri bundles
-        run: pnpm exec tauri build
+        run: pnpm run tauri:build
 
       - name: Packaged startup smoke
         run: pnpm run test:packaged-startup -- --json --no-build

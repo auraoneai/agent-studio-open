@@ -9,6 +9,7 @@ import sys
 import threading
 import urllib.error
 import urllib.request
+import zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from unittest.mock import patch
@@ -22,6 +23,7 @@ from agentstudio.trace_store import TraceStore
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests" / "fixtures"
+VENDOR = ROOT.parent / "vendor"
 
 
 def test_stdio_mcp_connect_smoke(capsys):
@@ -110,9 +112,14 @@ def test_a2a_loader_contract_json(capsys):
 def test_import_openai_otlp_phoenix_and_search(tmp_path, capsys):
     store = tmp_path / "traces.ast"
     assert main(["--json", "import-trace", str(FIXTURES / "openai_events.jsonl"), "--format", "openai", "--store", str(store)]) == 0
+    imported = json.loads(capsys.readouterr().out)
+    assert imported["session_id"] == imported["trace"]["trace_id"]
+    assert imported["format"] == "openai"
+    assert imported["trace"]["events"]
     assert main(["--json", "import-trace", str(FIXTURES / "otlp_trace.json"), "--format", "otlp-json", "--store", str(store)]) == 0
+    assert json.loads(capsys.readouterr().out)["trace"]["events"]
     assert main(["--json", "import-trace", str(FIXTURES / "phoenix_export.json"), "--format", "phoenix", "--store", str(store)]) == 0
-    capsys.readouterr()
+    assert json.loads(capsys.readouterr().out)["trace"]["events"]
     assert main(["--json", "store", "search", str(store), "refund"]) == 0
     hits = json.loads(capsys.readouterr().out)
     assert hits
@@ -142,21 +149,64 @@ def test_replay_diff_and_exports(tmp_path, capsys):
 
     export_dir = tmp_path / "gh"
     assert main(["--json", "export", "gh-action", str(FIXTURES / "regressions"), "--out", str(export_dir)]) == 0
+    github_evidence = json.loads(capsys.readouterr().out)
     assert (export_dir / ".github" / "workflows" / "agent-regression.yml").exists()
     assert (export_dir / "regressions" / "refund.json").exists()
+    assert github_evidence["schema"] == "agentstudio.export-evidence.v1"
+    assert github_evidence["sourceTrace"]["id"] == "refund-regression"
+    assert github_evidence["artifact"]["kind"] == "gh-action"
+    assert github_evidence["artifact"]["format"] == "directory"
+    assert (export_dir / "agentstudio-export-manifest.json").exists()
+    assert {
+        item["path"] for item in github_evidence["artifact"]["files"]
+    } == {
+        ".github/workflows/agent-regression.yml",
+        "regressions/refund.json",
+        "regressions/refund.assertions.yaml",
+        "README.md",
+    }
 
     junit_results = tmp_path / "results.json"
     junit_results.write_text(json.dumps([{"name": "refund", "ok": True, "detail": "ok"}]), encoding="utf-8")
     assert main(["--json", "export", "junit", str(junit_results), "--out", str(tmp_path / "junit.xml")]) == 0
+    junit_evidence = json.loads(capsys.readouterr().out)
     assert "<testsuite" in (tmp_path / "junit.xml").read_text(encoding="utf-8")
+    assert junit_evidence["artifact"]["filename"] == "junit.xml"
+    assert junit_evidence["artifact"]["format"] == "junit-xml"
+    assert junit_evidence["replay"]["state"] == "passed"
+    assert junit_evidence["artifact"]["files"][0]["sha256"] == hashlib.sha256(
+        (tmp_path / "junit.xml").read_bytes()
+    ).hexdigest()
 
     assert main(["--json", "export", "pr-comment", str(store_a), "--out", str(tmp_path / "comment.md")]) == 0
+    pr_evidence = json.loads(capsys.readouterr().out)
     assert "Agent Studio Trace" in (tmp_path / "comment.md").read_text(encoding="utf-8")
+    assert pr_evidence["sourceTrace"]["id"]
+    assert pr_evidence["artifact"]["format"] == "markdown"
     assert main(["--json", "export", "intake", str(store_a), "--out", str(tmp_path / "intake.zip"), "--suite", str(FIXTURES / "regressions")]) == 0
+    intake_evidence = json.loads(capsys.readouterr().out)
     assert (tmp_path / "intake.zip").exists()
+    assert intake_evidence["artifact"]["format"] == "zip"
+    assert intake_evidence["artifact"]["archiveSha256"] == hashlib.sha256(
+        (tmp_path / "intake.zip").read_bytes()
+    ).hexdigest()
+    with zipfile.ZipFile(tmp_path / "intake.zip") as archive:
+        assert set(archive.namelist()) == {
+            "trace.ast",
+            "regressions/refund.assertions.yaml",
+            "regressions/refund.json",
+            "README.md",
+            "agentstudio-export-manifest.json",
+        }
+        manifest = json.loads(
+            archive.read("agentstudio-export-manifest.json").decode("utf-8")
+        )
+        assert manifest["schema"] == "agentstudio.export-evidence.v1"
+        assert manifest["sourceTrace"]["sha256"]
 
     phoenix_out = tmp_path / "phoenix.json"
     assert main(["--json", "export", "phoenix-json", str(store_a), "--out", str(phoenix_out)]) == 0
+    capsys.readouterr()
     phoenix_payload = json.loads(phoenix_out.read_text(encoding="utf-8"))
     assert phoenix_payload["schema"] == "phoenix.trace.v1"
     assert phoenix_payload["spans"][0]["attributes"]["gen_ai.tool.name"] == "lookup_order"
@@ -164,10 +214,16 @@ def test_replay_diff_and_exports(tmp_path, capsys):
     replay_out = tmp_path / "replay.json"
     assert main(["--json", "store", "dump-replay", str(store_a), "--out", str(replay_out)]) == 0
     assert json.loads(replay_out.read_text(encoding="utf-8"))["events"]
+    capsys.readouterr()
 
-    card_out = tmp_path / "trace-card.md"
-    assert main(["--json", "export", "trace-card", "../../agent-trace-card/examples/refund_trace.json", "--out", str(card_out)]) == 0
-    assert "Agent Trace Card" in card_out.read_text(encoding="utf-8")
+    card_out = tmp_path / "trace-card.json"
+    assert main(["--json", "export", "trace-card", str(VENDOR / "agent-trace-card" / "examples" / "refund_trace.json"), "--out", str(card_out), "--format", "json"]) == 0
+    card_evidence = json.loads(capsys.readouterr().out)
+    assert json.loads(card_out.read_text(encoding="utf-8"))["schema_version"] == "agent-trace-card/v1"
+    assert card_evidence["artifact"]["filename"] == "trace-card.json"
+    assert card_evidence["artifact"]["format"] == "agent-trace-card-json"
+    assert card_evidence["sourceBuild"]["version"] == "0.2.0"
+    assert len(card_evidence["sourceBuild"]["sourceDigest"]) == 64
 
 
 def test_otlp_http_json_and_grpc_style_proto_receiver(tmp_path):
@@ -282,7 +338,7 @@ def test_sidecar_self_test_and_model_dry_run(capsys):
 
 
 def test_risk_scan_and_sidecar_venv_bootstrap(tmp_path, capsys):
-    assert main(["--json", "risk-scan", "../../mcp-risk-linter/examples/safe_server", "--fail-on", "high"]) == 0
+    assert main(["--json", "risk-scan", str(VENDOR / "mcp-risk-linter" / "examples" / "safe_server"), "--fail-on", "high"]) == 0
     assert "safe_server" in json.loads(capsys.readouterr().out)["root"]
     venv_path = tmp_path / "venv"
     assert main(["--json", "sidecar", "bootstrap", "--venv", str(venv_path)]) == 0
@@ -292,7 +348,7 @@ def test_risk_scan_and_sidecar_venv_bootstrap(tmp_path, capsys):
 
 def test_otel_bridge_wrapper(tmp_path, capsys):
     out = tmp_path / "cases.jsonl"
-    assert main(["--json", "otel-bridge", "extract", "../../otel-eval-bridge/examples/genai_trace.json", "--out", str(out)]) == 0
+    assert main(["--json", "otel-bridge", "extract", str(VENDOR / "otel-eval-bridge" / "examples" / "genai_trace.json"), "--out", str(out)]) == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload["case_count"] >= 1
     assert "trace-1" in out.read_text(encoding="utf-8")
