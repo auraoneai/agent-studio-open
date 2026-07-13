@@ -14,7 +14,22 @@ from mcp_risk_linter.scanner import scan_path
 from tool_call_replay.assertions import load_assertions
 from tool_call_replay.replay import load_replay, run_assertions, save_replay
 
-from .exports import diff_trace_stores, export_github_action, export_intake, export_junit, export_phoenix_json, export_pr_comment, write_diff_markdown
+from .exports import (
+    add_archive_checksum,
+    append_export_manifest,
+    build_export_evidence,
+    diff_trace_stores,
+    evidence_files_from_paths,
+    evidence_files_from_zip,
+    export_github_action,
+    export_intake,
+    export_junit,
+    export_phoenix_json,
+    export_pr_comment,
+    export_trace_card,
+    write_diff_markdown,
+    write_export_manifest,
+)
 from .importers import case_to_ast, load_a2a_card, load_replay_case
 from .mcp import HTTPTransport, RemoteAuthConfig, SSETransport, StdioTransport, WebSocketTransport, discover_manifest
 from .models import ModelGateway
@@ -194,7 +209,15 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "import-trace":
         case = load_replay_case(args.trace, args.format)
         sid = case_to_ast(case, args.store, args.format)
-        return _emit({"session_id": sid, "store": args.store}, args.json)
+        return _emit(
+            {
+                "session_id": sid,
+                "store": args.store,
+                "format": args.format,
+                "trace": case.to_dict(),
+            },
+            args.json,
+        )
     if args.command == "store":
         return _store(args)
     if args.command == "replay":
@@ -321,24 +344,84 @@ def load_replay_from_dict(payload: dict):
 
 def _export(args: argparse.Namespace) -> int:
     if args.export_command == "gh-action":
-        return _emit({"files": export_github_action(args.suite, args.out)}, getattr(args, "json", False))
+        files = export_github_action(args.suite, args.out)
+        evidence = build_export_evidence(
+            kind="gh-action",
+            source=args.suite,
+            destination=args.out,
+            artifact_filename=Path(args.out).name or "agentstudio-github-action",
+            artifact_format="directory",
+            media_type="application/vnd.agentstudio.directory",
+            files=evidence_files_from_paths(files, args.out),
+        )
+        write_export_manifest(args.out, evidence)
+        return _emit(evidence, getattr(args, "json", False))
     if args.export_command == "junit":
         results = json.loads(Path(args.results).read_text(encoding="utf-8"))
         export_junit(results, args.out)
-        return _emit({"out": args.out}, getattr(args, "json", False))
+        output = Path(args.out)
+        evidence = build_export_evidence(
+            kind="junit",
+            source=args.results,
+            destination=args.out,
+            artifact_filename=output.name,
+            artifact_format="junit-xml",
+            media_type="application/xml",
+            files=[(output.name, output.read_bytes(), "application/xml", "junit-xml")],
+            replay_result=results,
+        )
+        return _emit(evidence, getattr(args, "json", False))
     if args.export_command == "pr-comment":
         export_pr_comment(args.store, args.out)
-        return _emit({"out": args.out}, getattr(args, "json", False))
+        output = Path(args.out)
+        evidence = build_export_evidence(
+            kind="pr-comment",
+            source=args.store,
+            destination=args.out,
+            artifact_filename=output.name,
+            artifact_format="markdown",
+            media_type="text/markdown",
+            files=[(output.name, output.read_bytes(), "text/markdown", "markdown")],
+        )
+        return _emit(evidence, getattr(args, "json", False))
     if args.export_command == "intake":
         export_intake(args.store, args.out, risk_report=args.risk_report, suite=args.suite)
-        return _emit({"out": args.out}, getattr(args, "json", False))
+        output = Path(args.out)
+        evidence = build_export_evidence(
+            kind="intake",
+            source=args.store,
+            destination=args.out,
+            artifact_filename=output.name,
+            artifact_format="zip",
+            media_type="application/zip",
+            files=evidence_files_from_zip(output),
+        )
+        append_export_manifest(output, evidence)
+        return _emit(add_archive_checksum(evidence, output), getattr(args, "json", False))
     if args.export_command == "trace-card":
-        from agent_trace_card.generator import generate_card
-        from agent_trace_card.importers import load_trace
-        from agent_trace_card.render import render_card
-
-        Path(args.out).write_text(render_card(generate_card(load_trace(_resolve_input_path(args.trace))), args.format), encoding="utf-8")
-        return _emit({"out": args.out, "format": args.format}, getattr(args, "json", False))
+        trace_path = _resolve_input_path(args.trace)
+        export_trace_card(trace_path, args.out, args.format)
+        output = Path(args.out)
+        media_type = {
+            "json": "application/json",
+            "markdown": "text/markdown",
+            "html": "text/html",
+        }[args.format]
+        artifact_format = (
+            "agent-trace-card-json"
+            if args.format == "json"
+            else f"agent-trace-card-{args.format}"
+        )
+        evidence = build_export_evidence(
+            kind="trace-card",
+            source=trace_path,
+            destination=args.out,
+            artifact_filename=output.name,
+            artifact_format=artifact_format,
+            media_type=media_type,
+            files=[(output.name, output.read_bytes(), media_type, artifact_format)],
+        )
+        return _emit(evidence, getattr(args, "json", False))
     if args.export_command == "phoenix-json":
         export_phoenix_json(args.store, args.out, session_id=args.session_id)
         return _emit({"out": args.out, "format": "phoenix-json"}, getattr(args, "json", False))
@@ -384,24 +467,6 @@ def _resolve_input_path(path: str | Path) -> Path:
     candidate = Path(path)
     if candidate.exists() or candidate.is_absolute():
         return candidate
-    parts = candidate.parts
-    for engine_name in (
-        "mcp-risk-linter",
-        "a2a-contract-test",
-        "tool-call-replay",
-        "agent-trace-card",
-        "otel-eval-bridge",
-    ):
-        if engine_name in parts:
-            engine_index = parts.index(engine_name)
-            vendor_candidate = (
-                Path(__file__).resolve().parents[3]
-                / "vendor"
-                / engine_name
-                / Path(*parts[engine_index + 1 :])
-            )
-            if vendor_candidate.exists():
-                return vendor_candidate
     cli_root = Path(__file__).resolve().parents[2]
     rooted = (cli_root / candidate).resolve()
     if rooted.exists():

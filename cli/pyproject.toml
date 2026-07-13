@@ -3,8 +3,8 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "agentstudio"
-version = "0.1.0"
+name = "auraone-agent-studio-open"
+version = "0.2.0"
 description = "Headless Agent Studio Open protocol, trace-store, sidecar, and export CLI."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -14,11 +14,26 @@ keywords = ["mcp", "a2a", "opentelemetry", "agents", "replay", "debugging"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12"
 ]
-dependencies = ["grpcio>=1.60"]
+dependencies = [
+  "a2a-contract-test>=0.1.0",
+  "agent-trace-card>=0.1.1",
+  "grpcio>=1.60",
+  "mcp-risk-linter>=0.1.1",
+  "otel-eval-bridge>=0.1.0",
+  "tool-call-replay>=0.1.0"
+]
+
+[project.urls]
+Homepage = "https://github.com/auraoneai/agent-studio-open"
+Documentation = "https://github.com/auraoneai/agent-studio-open#readme"
+Repository = "https://github.com/auraoneai/agent-studio-open.git"
+Issues = "https://github.com/auraoneai/agent-studio-open/issues"
+Changelog = "https://github.com/auraoneai/agent-studio-open/blob/main/CHANGELOG.md"
 
 [project.scripts]
 agentstudio = "agentstudio.cli:main"
@@ -34,11 +49,6 @@ pythonpath = [
   "../vendor/a2a-contract-test/src",
   "../vendor/tool-call-replay/src",
   "../vendor/agent-trace-card/src",
-  "../vendor/otel-eval-bridge/src",
-  "../../mcp-risk-linter/src",
-  "../../a2a-contract-test/src",
-  "../../tool-call-replay/src",
-  "../../agent-trace-card/src",
-  "../../otel-eval-bridge/src"
+  "../vendor/otel-eval-bridge/src"
 ]
 testpaths = ["tests"]

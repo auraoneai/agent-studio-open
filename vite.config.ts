@@ -1,11 +1,11 @@
 import react from "@vitejs/plugin-react";
 import { fileURLToPath } from "node:url";
-import { defineConfig } from "vitest/config";
+import { resolve } from "node:path";
+import { defineConfig } from "vite";
 
+const appRoot = fileURLToPath(new URL(".", import.meta.url));
 const browserBase = process.env.AGENT_STUDIO_WEB_BASE ?? "/";
 const outDir = process.env.AGENT_STUDIO_WEB_OUT_DIR ?? "dist";
-const localModule = (path: string) =>
-  fileURLToPath(new URL(`./node_modules/${path}`, import.meta.url));
 
 export default defineConfig({
   plugins: [react()],
@@ -14,16 +14,34 @@ export default defineConfig({
   resolve: {
     alias: [
       {
-        find: /^react\/jsx-dev-runtime$/,
-        replacement: localModule("react/jsx-dev-runtime.js"),
+        find: "@auraone/aura-ide-kit/styles.css",
+        replacement: resolve(appRoot, "packages/aura-ide-kit/src/styles.css"),
       },
       {
-        find: /^react\/jsx-runtime$/,
-        replacement: localModule("react/jsx-runtime.js"),
+        find: "@auraone/proofline-oss/styles.css",
+        replacement: resolve(appRoot, "packages/proofline-oss/src/styles.css"),
       },
-      { find: /^react$/, replacement: localModule("react") },
-      { find: /^react-dom$/, replacement: localModule("react-dom") },
+      {
+        find: "@auraone/proofline-oss/tokens.css",
+        replacement: resolve(appRoot, "packages/proofline-oss/src/tokens.css"),
+      },
+      {
+        find: /^@auraone\/platform-contracts$/,
+        replacement: resolve(
+          appRoot,
+          "packages/platform-contracts/src/index.ts",
+        ),
+      },
+      {
+        find: /^@auraone\/aura-ide-kit$/,
+        replacement: resolve(appRoot, "packages/aura-ide-kit/src/index.ts"),
+      },
+      {
+        find: /^@auraone\/proofline-oss$/,
+        replacement: resolve(appRoot, "packages/proofline-oss/src/index.ts"),
+      },
     ],
+    dedupe: ["react", "react-dom"],
   },
   build: {
     outDir,
@@ -31,8 +49,5 @@ export default defineConfig({
   },
   server: {
     port: 4319,
-  },
-  test: {
-    testTimeout: 15000,
   },
 });

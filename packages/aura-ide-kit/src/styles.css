@@ -1,39 +1,41 @@
+@import "@auraone/proofline-oss/styles.css";
+
 :root {
-  color-scheme: dark;
-  --ag-void: #06090f;
-  --ag-deep: #0b0f1c;
-  --ag-surface-1: rgba(255, 255, 255, 0.04);
-  --ag-surface-2: rgba(255, 255, 255, 0.07);
-  --ag-surface-3: rgba(255, 255, 255, 0.1);
-  --ag-surface-inset: rgba(0, 0, 0, 0.18);
-  --ag-border-hairline: rgba(255, 255, 255, 0.06);
-  --ag-border-subtle: rgba(255, 255, 255, 0.1);
-  --ag-border-strong: rgba(255, 255, 255, 0.18);
-  --ag-border-accent: rgba(124, 211, 255, 0.45);
-  --ag-text: #f0f4fb;
-  --ag-text-secondary: #b8c2d1;
-  --ag-text-tertiary: #7b8597;
-  --ag-text-inverse: #06090f;
-  --ag-cyan: #7cd3ff;
-  --ag-lime: #c8ff5e;
-  --ag-emerald: #3ad8a4;
-  --ag-amber: #f5b94c;
-  --ag-rose: #ff7a8c;
-  --ag-violet: #a78bfa;
-  --ag-radius-xs: 4px;
-  --ag-radius-sm: 8px;
-  --ag-radius-md: 12px;
-  --ag-radius-lg: 16px;
-  --ag-radius-xl: 20px;
-  --ag-radius-pill: 999px;
-  --ag-shadow-hairline: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-  --ag-shadow-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  --ag-shadow-surface: 0 24px 60px -32px rgba(0, 0, 0, 0.55), 0 6px 18px -10px rgba(0, 0, 0, 0.4);
-  --ag-font-sans: Inter, system-ui, -apple-system, sans-serif;
-  --ag-font-mono: "IBM Plex Mono", "SF Mono", Menlo, Monaco, Consolas, monospace;
-  --ag-duration-fast: 160ms;
-  --ag-duration-normal: 240ms;
-  --ag-easing-standard: cubic-bezier(0.32, 0.72, 0, 1);
+  color-scheme: light;
+  --ag-void: var(--pl-canvas);
+  --ag-deep: var(--pl-surface);
+  --ag-surface-1: var(--pl-surface);
+  --ag-surface-2: var(--pl-surface-hover);
+  --ag-surface-3: var(--pl-surface-pressed);
+  --ag-surface-inset: var(--pl-surface-inset);
+  --ag-border-hairline: var(--pl-border-subtle);
+  --ag-border-subtle: var(--pl-border-default);
+  --ag-border-strong: var(--pl-border-strong);
+  --ag-border-accent: var(--pl-brand);
+  --ag-text: var(--pl-text-primary);
+  --ag-text-secondary: var(--pl-text-secondary);
+  --ag-text-tertiary: var(--pl-text-muted);
+  --ag-text-inverse: var(--pl-text-inverse);
+  --ag-cyan: var(--pl-brand);
+  --ag-lime: var(--pl-success);
+  --ag-emerald: var(--pl-success);
+  --ag-amber: var(--pl-warning);
+  --ag-rose: var(--pl-danger);
+  --ag-violet: var(--pl-review);
+  --ag-radius-xs: var(--pl-radius-xs);
+  --ag-radius-sm: var(--pl-radius-sm);
+  --ag-radius-md: var(--pl-radius-md);
+  --ag-radius-lg: var(--pl-radius-md);
+  --ag-radius-xl: var(--pl-radius-tool);
+  --ag-radius-pill: var(--pl-radius-md);
+  --ag-shadow-hairline: inset 0 0 0 1px var(--pl-border-subtle);
+  --ag-shadow-highlight: none;
+  --ag-shadow-surface: var(--pl-shadow-menu);
+  --ag-font-sans: var(--pl-font-ui);
+  --ag-font-mono: var(--pl-font-mono);
+  --ag-duration-fast: var(--pl-duration-fast);
+  --ag-duration-normal: var(--pl-duration-standard);
+  --ag-easing-standard: var(--pl-easing-standard);
 }
 
 .aura-ide-root {
@@ -42,27 +44,25 @@
   overflow: hidden;
   display: grid;
   grid-template-rows: 40px minmax(0, 1fr) 28px;
-  background:
-    radial-gradient(circle at 18% 12%, rgba(124, 211, 255, 0.13), transparent 32%),
-    radial-gradient(circle at 84% 88%, rgba(58, 216, 164, 0.08), transparent 30%),
-    var(--ag-void);
+  background: var(--ag-void);
   color: var(--ag-text);
   font-family: var(--ag-font-sans);
 }
 
-.aura-ide-root[data-theme="light"] {
+.aura-ide-root[data-theme="light"],
+.aura-ide-root[data-theme="system"] {
   color-scheme: light;
   --ag-void: #f7f9fd;
   --ag-deep: #ffffff;
-  --ag-surface-1: rgba(255, 255, 255, 0.8);
-  --ag-surface-2: rgba(255, 255, 255, 0.92);
-  --ag-surface-3: rgba(255, 255, 255, 1);
-  --ag-border-hairline: rgba(11, 15, 28, 0.08);
-  --ag-border-subtle: rgba(11, 15, 28, 0.12);
-  --ag-border-strong: rgba(11, 15, 28, 0.2);
-  --ag-text: #0b0f1c;
-  --ag-text-secondary: #3f4a5f;
-  --ag-text-tertiary: #647086;
+  --ag-surface-1: var(--pl-surface);
+  --ag-surface-2: var(--pl-surface-hover);
+  --ag-surface-3: var(--pl-surface-pressed);
+  --ag-border-hairline: var(--pl-border-subtle);
+  --ag-border-subtle: var(--pl-border-default);
+  --ag-border-strong: var(--pl-border-strong);
+  --ag-text: var(--pl-text-primary);
+  --ag-text-secondary: var(--pl-text-secondary);
+  --ag-text-tertiary: var(--pl-text-muted);
 }
 
 .aura-ide-root[data-theme="high-contrast"] {
@@ -83,8 +83,7 @@
   align-items: center;
   justify-content: space-between;
   border-color: var(--ag-border-hairline);
-  background: rgba(6, 9, 15, 0.72);
-  backdrop-filter: blur(18px);
+  background: var(--ag-deep);
 }
 
 .aura-ide-titlebar {
@@ -165,9 +164,8 @@
 .aura-ide-inspector,
 .aura-ide-bottom-panel,
 .aura-panel {
-  background: rgba(11, 15, 28, 0.62);
+  background: var(--ag-deep);
   box-shadow: var(--ag-shadow-highlight);
-  backdrop-filter: blur(18px);
 }
 
 .aura-ide-sidebar,
@@ -299,7 +297,7 @@
   display: flex;
   overflow-x: auto;
   border-bottom: 1px solid var(--ag-border-hairline);
-  background: rgba(6, 9, 15, 0.48);
+  background: var(--ag-deep);
 }
 
 .aura-tabs__tab {
@@ -387,9 +385,8 @@
   grid-template-rows: auto minmax(0, 1fr);
   border: 1px solid var(--ag-border-strong);
   border-radius: var(--ag-radius-xl);
-  background: rgba(11, 15, 28, 0.88);
+  background: var(--ag-deep);
   box-shadow: var(--ag-shadow-surface);
-  backdrop-filter: blur(24px);
   overflow: hidden;
 }
 
@@ -598,9 +595,8 @@
   width: min(680px, calc(100dvw - 32px));
   border: 1px solid var(--ag-border-strong);
   border-radius: var(--ag-radius-lg);
-  background: rgba(11, 15, 28, 0.9);
+  background: var(--ag-deep);
   box-shadow: var(--ag-shadow-surface);
-  backdrop-filter: blur(24px);
 }
 
 .aura-modal__header {
@@ -628,9 +624,8 @@
   padding: 12px;
   border: 1px solid var(--ag-border-subtle);
   border-radius: var(--ag-radius-md);
-  background: rgba(11, 15, 28, 0.9);
+  background: var(--ag-deep);
   box-shadow: var(--ag-shadow-surface);
-  backdrop-filter: blur(18px);
 }
 
 .aura-toast--success {

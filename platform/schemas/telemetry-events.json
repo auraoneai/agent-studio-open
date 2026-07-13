@@ -1,0 +1,152 @@
+{
+  "$schema": "https://schemas.auraone.ai/open-studio/telemetry-events/v1.json",
+  "version": "1.0.0",
+  "events": [
+    {
+      "name": "app_launched",
+      "description": "The app started.",
+      "owner": "platform",
+      "since": "0.1.0",
+      "payload_schema": { "type": "object", "properties": {}, "additionalProperties": false }
+    },
+    {
+      "name": "welcome_wizard_completed",
+      "description": "The user finished the welcome wizard.",
+      "owner": "platform",
+      "since": "0.1.0",
+      "payload_schema": {
+        "type": "object",
+        "required": ["telemetry_opt_in", "crash_opt_in"],
+        "properties": {
+          "telemetry_opt_in": { "type": "boolean" },
+          "crash_opt_in": { "type": "boolean" }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "update_check_performed",
+      "description": "The app checked for an update.",
+      "owner": "platform",
+      "since": "0.1.0",
+      "payload_schema": { "type": "object", "properties": { "channel": { "enum": ["stable", "beta", "nightly"] } }, "additionalProperties": false }
+    },
+    {
+      "name": "update_applied",
+      "description": "The app updated to a new version.",
+      "owner": "platform",
+      "since": "0.1.0",
+      "payload_schema": { "type": "object", "properties": { "from_version": { "type": "string" }, "to_version": { "type": "string" } }, "additionalProperties": false }
+    },
+    {
+      "name": "feature_used",
+      "description": "A registered feature was used.",
+      "owner": "per-flagship",
+      "since": "0.1.0",
+      "payload_schema": { "type": "object", "properties": { "feature_id": { "type": "string", "pattern": "^[a-z][a-z0-9_.-]+$" } }, "required": ["feature_id"], "additionalProperties": false }
+    },
+    {
+      "name": "error_encountered",
+      "description": "A non-crash error was encountered.",
+      "owner": "platform",
+      "since": "0.1.0",
+      "payload_schema": { "type": "object", "properties": { "category": { "type": "string", "pattern": "^[a-z][a-z0-9_]+$" } }, "required": ["category"], "additionalProperties": false }
+    },
+    {
+      "name": "session_ended",
+      "description": "A session ended.",
+      "owner": "platform",
+      "since": "0.1.0",
+      "payload_schema": { "type": "object", "properties": { "duration_seconds": { "type": "integer", "minimum": 0 } }, "required": ["duration_seconds"], "additionalProperties": false }
+    },
+    {
+      "name": "intake_packet_exported",
+      "description": "An intake packet was created and optionally uploaded.",
+      "owner": "platform",
+      "since": "0.1.0",
+      "payload_schema": { "type": "object", "properties": { "product": { "type": "string" }, "file_count": { "type": "integer", "minimum": 0 } }, "additionalProperties": false }
+    },
+    {
+      "name": "robotics_dataset_opened",
+      "description": "Robotics Studio Open opened a dataset format; payload includes format and episode-count bucket only.",
+      "owner": "robotics-studio-open",
+      "since": "0.1.0",
+      "payload_schema": {
+        "type": "object",
+        "required": ["format", "episode_bucket"],
+        "properties": {
+          "format": {
+            "enum": ["lerobot_v3", "lerobot_v2", "rlds", "openx", "hdf5", "rosbag2", "rosbag1", "folder_mp4_jsonl"]
+          },
+          "episode_bucket": {
+            "enum": ["1_99", "100_999", "1000_9999", "10000_49999", "50000_plus"]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "robotics_feature_used",
+      "description": "A Robotics Studio Open feature was used; payload includes a registered feature ID only.",
+      "owner": "robotics-studio-open",
+      "since": "0.1.0",
+      "payload_schema": {
+        "type": "object",
+        "required": ["feature_id"],
+        "properties": {
+          "feature_id": {
+            "enum": [
+              "dataset.open",
+              "episode.scrub",
+              "sensor.visibility_toggle",
+              "failure.cluster",
+              "failure.cross_dataset_search",
+              "vla.probe",
+              "sensor_qa.run",
+              "export.hf_hub",
+              "export.local_disk",
+              "export.auraone_intake"
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "robotics_export_completed",
+      "description": "Robotics Studio Open completed an export; payload includes target and payload role count only.",
+      "owner": "robotics-studio-open",
+      "since": "0.1.0",
+      "payload_schema": {
+        "type": "object",
+        "required": ["target", "payload_role_count"],
+        "properties": {
+          "target": {
+            "enum": ["hf_hub", "local_disk", "auraone_intake", "failure_gallery"]
+          },
+          "payload_role_count": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "agent_protocol_surface_used",
+      "description": "An Agent Studio Open protocol surface was used without recording protocol contents.",
+      "owner": "agent-studio-open",
+      "since": "0.3.0",
+      "payload_schema": {
+        "type": "object",
+        "required": ["surface"],
+        "properties": {
+          "surface": {
+            "enum": ["mcp", "otlp", "a2a", "llm_gateway", "intake"]
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  ]
+}

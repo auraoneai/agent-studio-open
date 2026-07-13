@@ -1,13 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
-import type { ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from "react";
 import { Editor } from "@monaco-editor/react";
 import { Virtuoso } from "react-virtuoso";
+import { AuraTelemetryEventLog } from "@auraone/aura-ide-kit";
 import {
   TelemetryEventLog,
   type TelemetryLogEntry,
   createTelemetryEvent,
   toAuraTelemetryEvents,
-  type AuraTelemetryEvent,
+  toLocalTelemetryLogEntries,
 } from "./platformTelemetry";
 import {
   Activity,
@@ -23,8 +24,8 @@ import {
   Eye,
   FileJson,
   GitCompare,
-  Github,
   KeyRound,
+  MoreHorizontal,
   Play,
   Plug,
   Radio,
@@ -40,11 +41,12 @@ import type { LucideIcon } from "lucide-react";
 import {
   a2aResults,
   buildExportBundle,
+  demoCompareResult,
+  demoReplayResult,
   filterSessions,
   modelPresets,
   models,
   sampleManifest,
-  sampleTelemetryEvents,
   sampleToolPayload,
   spans,
   summarizeSession,
@@ -56,12 +58,14 @@ import {
 import { useStudioStore } from "./store";
 import type {
   A2ATestResult,
+  ComparisonEvidence,
   ConnectionDraft,
   ExportBundle,
   ModelPreset,
   ModelVendor,
   Manifest,
   ProviderKeyStatus,
+  ReplayEvidence,
   Span,
   Surface,
   TimelineEvent,
@@ -69,9 +73,9 @@ import type {
 } from "./types";
 import {
   deleteProviderKeySecret,
+  getRuntimeCapabilities,
   listProviderKeySecrets,
   loadProviderKeySecret,
-  providerSecretMode,
   saveProviderKeySecret,
   validateByoProviderKey,
 } from "./platformBridge";
@@ -83,11 +87,27 @@ import {
   runtimeMcpConnect,
   runtimeOtlpReceiverToggle,
   runtimeReplayRun,
-  runtimeSidecarHealth,
   runtimeTraceImport,
   runtimeTraceSearch,
   runtimeUnavailableMessage,
 } from "./runtimeBridge";
+import {
+  artifactForKind,
+  buildLocalExportBundle,
+  deriveRuntimeOutputPath,
+  downloadLocalArtifact,
+  exportArtifactDefinitions,
+  runtimeExportFormat,
+  sha256Hex,
+  type ArtifactExportKind,
+  type ExportEvidenceContext,
+  type ExportOperationKey,
+} from "./exportArtifacts";
+import {
+  checkForAgentStudioUpdate,
+  type AgentStudioUpdateResult,
+} from "./updater";
+import studioLogo from "./assets/agentstudio-logo.svg";
 
 const initialConnection: ConnectionDraft = {
   name: "support-crm-mcp",
@@ -108,11 +128,24 @@ const demoConnection: ConnectionDraft = {
   headers: "{}",
 };
 const demoMode = import.meta.env.VITE_AGENT_STUDIO_DEMO_MODE === "true";
-const demoBrowserUrl =
-  import.meta.env.VITE_AGENT_STUDIO_BROWSER_URL ??
-  "https://agentstudio.auraone.ai";
+const appVersion = "0.2.0";
+const updateChannel =
+  import.meta.env.VITE_AGENT_STUDIO_UPDATE_CHANNEL ?? "stable";
 const docsUrl = "https://auraone.ai/resources/docs/agent-studio-open";
 const repoUrl = "https://github.com/auraoneai/agent-studio-open";
+const desktopReleaseUrl =
+  import.meta.env.VITE_AGENT_STUDIO_DESKTOP_RELEASE_URL ??
+  `${repoUrl}/releases/latest`;
+
+function isHostedPreviewHost() {
+  if (typeof window === "undefined") return false;
+  if (new URLSearchParams(window.location.search).get("preview") === "1") {
+    return true;
+  }
+  return /(^|\.)agentstudio\.auraone\.ai$|\.vercel\.app$/.test(
+    window.location.hostname,
+  );
+}
 
 const emptyManifest: Manifest = {
   serverName: "No MCP server connected",
@@ -153,6 +186,19 @@ const surfaceGroups: Array<{
   { id: "release", label: "Release" },
 ];
 
+const mobilePrimarySurfaces: Surface[] = [
+  "connect",
+  "traces",
+  "replay",
+  "compare",
+  "ship",
+];
+
+type ExportOperationStatus = {
+  state: "idle" | "running" | "success" | "error";
+  message: string;
+};
+
 const vendorTone: Record<ModelVendor, string> = {
   anthropic: "vendor-anthropic",
   openai: "vendor-openai",
@@ -192,6 +238,18 @@ const surfaceCommands: Array<{
     key: "Cmd/Ctrl+R",
   },
   {
+    id: "a2a",
+    title: "Validate A2A contract",
+    surface: "a2a",
+    key: "Cmd/Ctrl+5",
+  },
+  {
+    id: "observe",
+    title: "Open Data Network",
+    surface: "observe",
+    key: "Cmd/Ctrl+6",
+  },
+  {
     id: "compare",
     title: "Compare model behavior",
     surface: "compare",
@@ -218,7 +276,7 @@ function StudioMark({ size = 32 }: { size?: number }) {
       style={{ width: size, height: size }}
       aria-hidden="true"
     >
-      <img className="studio-mark-image" src="/icon-192.png" alt="" />
+      <img className="studio-mark-image" src={studioLogo} alt="" />
     </span>
   );
 }
@@ -232,33 +290,6 @@ function HealthBeacon({
     <span className={`health-beacon health-beacon-${tone}`} aria-hidden="true">
       <span />
     </span>
-  );
-}
-
-function AuraTelemetryEventLog({ events }: { events: AuraTelemetryEvent[] }) {
-  if (!events.length) {
-    return (
-      <span className="muted-inline">
-        No local telemetry events recorded yet.
-      </span>
-    );
-  }
-  return (
-    <ul className="event-log" aria-label="Platform telemetry event log">
-      {events.map((event) => (
-        <li key={event.id}>
-          <code>{new Date(event.timestamp).toLocaleTimeString()}</code>
-          <strong>{event.name}</strong>
-          <span>
-            {event.destination}: {event.payloadPreview.validation}
-          </span>
-          <StatusPill
-            tone={event.optedIn ? "success" : "neutral"}
-            label={event.optedIn ? "sent" : "local"}
-          />
-        </li>
-      ))}
-    </ul>
   );
 }
 
@@ -288,10 +319,22 @@ function platformArch(): "x86_64" | "aarch64" {
 }
 
 export function App() {
+  const runtime = useMemo(() => getRuntimeCapabilities(), []);
   const state = useStudioStore((store) => store.state);
   const setState = useStudioStore((store) => store.setState);
+  const shellRef = useRef<HTMLDivElement>(null);
   const [connection, setConnection] = useState<ConnectionDraft>(() =>
-    demoMode ? demoConnection : initialConnection,
+    demoMode
+      ? demoConnection
+      : runtime.localProcesses
+        ? initialConnection
+        : {
+            ...initialConnection,
+            transport: "http",
+            command: "",
+            args: "",
+            cwd: "",
+          },
   );
   const [jsonValue, setJsonValue] = useState(
     demoMode ? sampleToolPayload : "{\n  \n}",
@@ -329,14 +372,33 @@ export function App() {
   const [traceImportPath, setTraceImportPath] = useState("");
   const [traceImportFormat, setTraceImportFormat] = useState("openai");
   const [traceStorePath, setTraceStorePath] = useState("agentstudio-live.ast");
-  const [replayPath, setReplayPath] = useState("");
-  const [assertionsPath, setAssertionsPath] = useState("");
-  const [replayResult, setReplayResult] = useState<unknown>(null);
-  const [compareBaseline, setCompareBaseline] = useState("");
-  const [compareCandidate, setCompareCandidate] = useState("");
-  const [compareResult, setCompareResult] = useState<unknown>(null);
+  const [replayPath, setReplayPath] = useState(
+    demoMode ? "regressions/refund.json" : "",
+  );
+  const [assertionsPath, setAssertionsPath] = useState(
+    demoMode ? "regressions/refund.assertions.yaml" : "",
+  );
+  const [replayResult, setReplayResult] = useState<ReplayEvidence | null>(
+    demoMode ? demoReplayResult : null,
+  );
+  const [compareBaseline, setCompareBaseline] = useState(
+    demoMode ? "baseline/support-refund.ast" : "",
+  );
+  const [compareCandidate, setCompareCandidate] = useState(
+    demoMode ? "candidate/support-refund.ast" : "",
+  );
+  const [compareResult, setCompareResult] =
+    useState<ComparisonEvidence | null>(
+    demoMode ? demoCompareResult : null,
+    );
   const [exportInput, setExportInput] = useState("agentstudio-live.ast");
   const [exportOut, setExportOut] = useState("agentstudio-export.md");
+  const [exportStatuses, setExportStatuses] = useState<
+    Partial<Record<ExportOperationKey, ExportOperationStatus>>
+  >({});
+  const [exportGeneratedAt] = useState(() =>
+    demoMode ? "2026-05-12T09:42:30.000Z" : new Date().toISOString(),
+  );
   const [traceCardModalOpen, setTraceCardModalOpen] = useState(false);
   const [telemetryOptIn, setTelemetryOptIn] = useState(false);
   const [crashReportsOptIn, setCrashReportsOptIn] = useState(false);
@@ -344,13 +406,13 @@ export function App() {
   const [telemetryEntries, setTelemetryEntries] = useState<
     readonly TelemetryLogEntry[]
   >([]);
-  const [installKeyStatus, setInstallKeyStatus] = useState("not checked");
+  const [installKeyStatus, setInstallKeyStatus] = useState(
+    runtime.intakeSigning
+      ? "Not checked"
+      : "Unavailable in browser; no key generated",
+  );
   const [sessionId] = useState(() => createUuid());
   const [installId] = useState(() => createUuid());
-  const exportBundle = useMemo<ExportBundle>(
-    () => buildExportBundle(runtimeTraceSessions),
-    [runtimeTraceSessions],
-  );
   const [keyInput, setKeyInput] = useState("");
   const [keyPassphrase, setKeyPassphrase] = useState("");
   const [keyVendor, setKeyVendor] = useState<ModelVendor>("openai");
@@ -361,6 +423,9 @@ export function App() {
   const [savedProviderKeys, setSavedProviderKeys] = useState<
     Array<{ provider: string; updatedAt: string }>
   >([]);
+  const [updateChecking, setUpdateChecking] = useState(false);
+  const [updateResult, setUpdateResult] =
+    useState<AgentStudioUpdateResult | null>(null);
 
   const selectedTrace =
     runtimeTraceSessions.find(
@@ -368,6 +433,49 @@ export function App() {
     ) ??
     runtimeTraceSessions[0] ??
     emptyTrace;
+  const exportBundle = useMemo<ExportBundle>(
+    () =>
+      buildExportBundle([
+        selectedTrace,
+        ...runtimeTraceSessions.filter(
+          (session) => session.id !== selectedTrace.id,
+        ),
+      ]),
+    [runtimeTraceSessions, selectedTrace],
+  );
+  const exportEvidenceContext = useMemo<ExportEvidenceContext>(
+    () => ({
+      generatedAt: exportGeneratedAt,
+      sourceBuild: {
+        product: "Agent Studio Open",
+        version: appVersion,
+        commit:
+          import.meta.env.VITE_AGENT_STUDIO_SOURCE_COMMIT ??
+          `version-${appVersion}`,
+        state:
+          import.meta.env.VITE_AGENT_STUDIO_SOURCE_STATE ??
+          (demoMode ? "synthetic-demo" : "runtime"),
+        sourceDigest:
+          import.meta.env.VITE_AGENT_STUDIO_SOURCE_DIGEST ??
+          sha256Hex(`Agent Studio Open@${appVersion}`),
+      },
+      sourceTrace: {
+        id: selectedTrace.id,
+        path: exportInput,
+        content: exportBundle.sourceTrace,
+      },
+      replay: replayResult,
+      comparison: compareResult,
+    }),
+    [
+      compareResult,
+      exportBundle.sourceTrace,
+      exportGeneratedAt,
+      exportInput,
+      replayResult,
+      selectedTrace.id,
+    ],
+  );
   const selectedTool =
     manifest.tools.find((tool) => tool.name === state.selectedToolName) ??
     manifest.tools[0] ??
@@ -376,23 +484,62 @@ export function App() {
     () => filterSessions(runtimeTraceSessions, state.search),
     [runtimeTraceSessions, state.search],
   );
+  const selectedTraceSummary = useMemo(
+    () => summarizeSession(selectedTrace),
+    [selectedTrace],
+  );
   const jsonValidation = useMemo(() => validateJson(jsonValue), [jsonValue]);
   const auraTheme = state.theme === "contrast" ? "high-contrast" : state.theme;
   const customModelInList =
     state.customModelId.trim().length > 0 &&
     state.selectedModels.includes(state.customModelId.trim());
-  const secretMode = providerSecretMode();
+  const secretMode = runtime.osKeychain ? "os-keychain" : "browser-vault";
+  const localTelemetryEntries = useMemo(
+    () => toLocalTelemetryLogEntries(telemetryEntries),
+    [telemetryEntries],
+  );
+  const modalOpen = state.commandPaletteOpen || traceCardModalOpen;
 
   useEffect(() => {
     document.documentElement.dataset.theme = auraTheme;
-    document.documentElement.dataset.edition = state.edition;
+    document.documentElement.dataset.edition = runtime.edition;
     document.documentElement.dataset.demo = demoMode ? "true" : "false";
-  }, [auraTheme, state.edition]);
+  }, [auraTheme, runtime.edition]);
+
+  useEffect(() => {
+    if (!modalOpen || !shellRef.current) {
+      return;
+    }
+    const background = Array.from(shellRef.current.children).filter(
+      (element): element is HTMLElement =>
+        element instanceof HTMLElement &&
+        !element.classList.contains("modal-backdrop"),
+    );
+    for (const element of background) {
+      element.setAttribute("inert", "");
+      element.setAttribute("aria-hidden", "true");
+    }
+    return () => {
+      for (const element of background) {
+        element.removeAttribute("inert");
+        element.removeAttribute("aria-hidden");
+      }
+    };
+  }, [modalOpen]);
 
   const refreshSavedProviderKeys = async () => {
     try {
       const records = await listProviderKeySecrets();
-      setSavedProviderKeys(records);
+      setSavedProviderKeys((current) =>
+        current.length === records.length &&
+        current.every(
+          (record, index) =>
+            record.provider === records[index]?.provider &&
+            record.updatedAt === records[index]?.updatedAt,
+        )
+          ? current
+          : records,
+      );
       setState((current) => {
         let providerKeys = current.providerKeys;
         for (const record of records) {
@@ -436,37 +583,15 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (demoMode) {
-      return;
-    }
-    void runtimeSidecarHealth()
-      .then((health) => {
-        setInstallKeyStatus(
-          health.ok ? "CLI runtime ready" : "CLI runtime missing packages",
-        );
-      })
-      .catch((error) => {
-        setInstallKeyStatus(
-          error instanceof Error ? error.message : "CLI runtime unavailable",
-        );
-      });
-  }, []);
-
-  useEffect(() => {
     if (!demoMode) {
       return;
     }
     setState((current) => {
-      if (
-        current.edition === "browser" &&
-        !current.firstRunOpen &&
-        !current.recording
-      ) {
+      if (!current.firstRunOpen && !current.recording) {
         return current;
       }
       return {
         ...current,
-        edition: "browser",
         firstRunOpen: false,
         recording: false,
       };
@@ -560,7 +685,7 @@ export function App() {
         sessionId,
         app: {
           flagship: "agent-studio-open",
-          version: "0.1.0",
+          version: appVersion,
           channel: "beta",
         },
         device: {
@@ -587,7 +712,7 @@ export function App() {
   };
 
   const runConnect = async () => {
-    if (state.edition === "browser" && connection.transport === "stdio") {
+    if (!runtime.localProcesses && connection.transport === "stdio") {
       setState((current) => ({
         ...current,
         errorMessage:
@@ -723,7 +848,7 @@ export function App() {
   };
 
   const toggleOtlpReceiver = async () => {
-    if (state.edition === "browser") {
+    if (!runtime.localListeners) {
       setError(runtimeUnavailableMessage("OTLP receiver"));
       return;
     }
@@ -767,27 +892,7 @@ export function App() {
         traceImportFormat.trim(),
         traceStorePath.trim(),
       );
-      const sessionId =
-        typeof result.session_id === "string"
-          ? result.session_id
-          : createUuid();
-      const imported: TraceSession = {
-        id: sessionId,
-        name: `Imported ${traceImportFormat}`,
-        model: "runtime",
-        status: "passed",
-        createdAt: new Date().toISOString(),
-        tags: ["imported", traceImportFormat],
-        events: [
-          {
-            id: `${sessionId}-import`,
-            kind: "replay",
-            title: "Trace imported",
-            body: `${traceImportPath} -> ${traceStorePath}`,
-            timestamp: new Date().toLocaleTimeString(),
-          },
-        ],
-      };
+      const imported = result;
       setRuntimeTraceSessions((current) => [
         imported,
         ...current.filter((session) => session.id !== imported.id),
@@ -831,6 +936,11 @@ export function App() {
       );
       return;
     }
+    if (demoMode) {
+      setReplayResult(demoReplayResult);
+      runOperation("replay evidence refreshed");
+      return;
+    }
     try {
       setState((current) => ({
         ...current,
@@ -855,6 +965,11 @@ export function App() {
       setError("Compare requires baseline and candidate .ast store paths.");
       return;
     }
+    if (demoMode) {
+      setCompareResult(demoCompareResult);
+      runOperation("comparison evidence refreshed");
+      return;
+    }
     try {
       setState((current) => ({
         ...current,
@@ -874,28 +989,97 @@ export function App() {
     }
   };
 
-  const exportTraceCard = async () => {
+  const setExportOperationStatus = (
+    key: ExportOperationKey,
+    status: ExportOperationStatus,
+  ) => {
+    setExportStatuses((current) => ({ ...current, [key]: status }));
+  };
+
+  const exportArtifact = async (kind: ArtifactExportKind) => {
     if (!exportInput.trim() || !exportOut.trim()) {
       setError("Export requires an input path and output path.");
       return;
     }
+    const definition = exportArtifactDefinitions.find(
+      (item) => item.kind === kind,
+    );
+    const operationLabel = definition?.title ?? kind;
+    setExportOperationStatus(kind, {
+      state: "running",
+      message: `Exporting ${operationLabel}…`,
+    });
     try {
       setState((current) => ({
         ...current,
-        loadingOperation: "exporting trace card",
+        loadingOperation: `exporting ${operationLabel}`,
         errorMessage: null,
       }));
-      const result = await runtimeExportBundle(
-        "trace-card",
-        exportInput.trim(),
-        exportOut.trim(),
-      );
+      const localExport = demoMode || !runtime.tauri;
+      if (localExport) {
+        const artifact = await artifactForKind(
+          exportBundle,
+          exportEvidenceContext,
+          kind,
+        );
+        downloadLocalArtifact(artifact);
+        setLastResponse(JSON.stringify(artifact.evidence, null, 2));
+        setExportOperationStatus(kind, {
+          state: "success",
+          message: `Downloaded ${artifact.filename}`,
+        });
+      } else {
+        const outputPath = deriveRuntimeOutputPath(exportOut, kind);
+        const result = await runtimeExportBundle(
+          kind,
+          exportInput.trim(),
+          outputPath,
+          runtimeExportFormat(kind),
+        );
+        setLastResponse(JSON.stringify(result, null, 2));
+        setExportOperationStatus(kind, {
+          state: "success",
+          message: `Exported to ${outputPath}`,
+        });
+      }
       setState((current) => ({ ...current, loadingOperation: null }));
-      setLastResponse(JSON.stringify(result, null, 2));
-      setTraceCardModalOpen(false);
     } catch (error) {
       setState((current) => ({ ...current, loadingOperation: null }));
-      setError(error instanceof Error ? error.message : "Export failed.");
+      const message =
+        error instanceof Error ? error.message : `${operationLabel} export failed.`;
+      setExportOperationStatus(kind, { state: "error", message });
+      setError(message);
+    }
+  };
+
+  const runExportBundle = async () => {
+    setExportOperationStatus("bundle", {
+      state: "running",
+      message: "Packaging 5 deterministic artifacts…",
+    });
+    try {
+      setState((current) => ({
+        ...current,
+        loadingOperation: "packaging export bundle",
+        errorMessage: null,
+      }));
+      const artifact = await buildLocalExportBundle(
+        exportBundle,
+        exportEvidenceContext,
+      );
+      downloadLocalArtifact(artifact);
+      setLastResponse(JSON.stringify(artifact.evidence, null, 2));
+      setExportOperationStatus("bundle", {
+        state: "success",
+        message: `Downloaded ${artifact.filename}`,
+      });
+      setState((current) => ({ ...current, loadingOperation: null }));
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Export bundle failed.";
+      setExportOperationStatus("bundle", { state: "error", message });
+      setState((current) => ({ ...current, loadingOperation: null }));
+      setError(message);
     }
   };
 
@@ -1013,16 +1197,65 @@ export function App() {
   };
 
   const ensureInstallKeypair = async () => {
-    const keypair = await ensureAgentIntakeInstallSigningKeypair();
-    setInstallKeyStatus(`${keypair.algorithm} key ready`);
+    if (!runtime.intakeSigning) {
+      setInstallKeyStatus("Unavailable in browser; no key generated");
+      return;
+    }
+    setInstallKeyStatus("Checking the OS keychain...");
+    try {
+      const keypair = await ensureAgentIntakeInstallSigningKeypair();
+      setInstallKeyStatus(
+        `${keypair.algorithm} identity stored in the OS keychain · created ${new Date(
+          keypair.created_at,
+        ).toLocaleDateString()}`,
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "The intake signing identity is unavailable.";
+      setInstallKeyStatus(message);
+      setError(message);
+    }
   };
 
   const activeSurfaceMeta =
     surfaces.find((surface) => surface.id === state.activeSurface) ??
     surfaces[0];
+  const hostedPreviewMode = demoMode || isHostedPreviewHost();
 
   return (
-    <div className="studio-shell aura-ide-root" data-theme={auraTheme}>
+    <div
+      ref={shellRef}
+      className="studio-shell aura-ide-root"
+      data-theme={auraTheme}
+      data-modal-open={modalOpen ? "true" : "false"}
+    >
+      <header className="mobile-appbar">
+        <div className="mobile-brand">
+          <StudioMark size={28} />
+          <div>
+            <strong>Agent Studio</strong>
+            <span>{activeSurfaceMeta.label}</span>
+          </div>
+        </div>
+        <div className="mobile-appbar-actions">
+          <span className="mobile-preview-indicator" aria-hidden="true" />
+          <span className="sr-only">
+            {hostedPreviewMode ? "Hosted preview" : "Local workspace"}
+          </span>
+          <button
+            className="icon-button"
+            aria-label="Search commands"
+            onClick={() =>
+              setState((current) => ({ ...current, commandPaletteOpen: true }))
+            }
+          >
+            <Search aria-hidden="true" size={18} />
+          </button>
+        </div>
+      </header>
+
       <aside className="sidebar" aria-label="Agent Studio Open navigation">
         <div className="brand">
           <StudioMark size={30} />
@@ -1032,7 +1265,7 @@ export function App() {
             <span>
               {demoMode
                 ? "Hosted demo"
-                : state.edition === "desktop"
+                : runtime.tauri
                   ? "Desktop IDE"
                   : "Browser preview"}
             </span>
@@ -1054,6 +1287,7 @@ export function App() {
                     <button
                       className={isActive ? "nav-item active" : "nav-item"}
                       key={surface.id}
+                      data-surface={surface.id}
                       onClick={() =>
                         setState((current) => ({
                           ...current,
@@ -1062,7 +1296,9 @@ export function App() {
                       }
                       aria-current={isActive ? "page" : undefined}
                       aria-label={
-                        surface.id === "settings" ? "Open settings" : undefined
+                        surface.id === "settings"
+                          ? "Open settings"
+                          : `Open ${surface.label} workspace`
                       }
                     >
                       <Icon aria-hidden="true" size={15} />
@@ -1078,6 +1314,7 @@ export function App() {
         <div className="sidebar-footer">
           <button
             className="ghost-button"
+            aria-label="Open command palette"
             onClick={() =>
               setState((current) => ({ ...current, commandPaletteOpen: true }))
             }
@@ -1086,19 +1323,13 @@ export function App() {
             <span>Command palette</span>
             <kbd>⌘K</kbd>
           </button>
-          <label className="edition-switch">
-            <input
-              type="checkbox"
-              checked={state.edition === "browser"}
-              onChange={(event) =>
-                setState((current) => ({
-                  ...current,
-                  edition: event.target.checked ? "browser" : "desktop",
-                }))
-              }
-            />
-            <span>Browser constraints</span>
-          </label>
+          <div
+            className="runtime-edition"
+            aria-label={`Runtime edition: ${runtime.edition}`}
+          >
+            <Shield aria-hidden="true" size={12} />
+            <span>{runtime.tauri ? "Desktop runtime" : "Browser runtime"}</span>
+          </div>
         </div>
       </aside>
 
@@ -1125,7 +1356,15 @@ export function App() {
               <StatusPill
                 tone={state.recording ? "danger" : "neutral"}
                 dot
-                label={state.recording ? "Recording" : "Idle · Local"}
+                label={
+                  state.recording
+                    ? "Recording"
+                    : hostedPreviewMode
+                      ? "Browser preview"
+                      : runtime.tauri
+                        ? "Idle · Local"
+                        : "Browser runtime"
+                }
               />
             </div>
             <span className="topbar-divider" aria-hidden="true" />
@@ -1136,10 +1375,8 @@ export function App() {
             <button
               className="icon-button"
               aria-label="Toggle recording"
-              aria-hidden="true"
               aria-pressed={state.recording}
               disabled={demoMode}
-              tabIndex={-1}
               onClick={() => {
                 if (!demoMode) {
                   setState((current) => ({
@@ -1151,20 +1388,12 @@ export function App() {
             >
               <Radio aria-hidden="true" size={15} />
             </button>
-            <button
-              className="icon-button"
-              aria-label="Open settings"
+            <span
+              className="icon-button topbar-decoration"
               aria-hidden="true"
-              tabIndex={-1}
-              onClick={() =>
-                setState((current) => ({
-                  ...current,
-                  activeSurface: "settings",
-                }))
-              }
             >
               <Settings aria-hidden="true" size={15} />
-            </button>
+            </span>
           </div>
         </header>
 
@@ -1199,8 +1428,8 @@ export function App() {
           <ContextChip
             icon={Shield}
             label="Privacy"
-            value={telemetryOptIn ? "Telemetry on" : "Local-only"}
-            tone={telemetryOptIn ? "warn" : "ok"}
+            value={telemetryOptIn ? "Local preview" : "Local-only"}
+            tone="ok"
           />
         </div>
 
@@ -1216,8 +1445,8 @@ export function App() {
                 <em>Three</em> steps to a working trace.
               </strong>
               <span>
-                ① Pick edition · ② Set provider keys · ③ Connect a sample MCP
-                server, then run your first replay.
+                1. Confirm the detected runtime. 2. Set provider keys. 3.
+                Connect a sample MCP server, then run your first replay.
               </span>
             </div>
             <div className="first-run-actions">
@@ -1265,75 +1494,41 @@ export function App() {
             }
           />
         )}
-        {demoMode && (
-          <div className="demo-banner" role="status">
-            <div className="demo-banner-copy">
-              <StudioMark size={28} />
-              <span>
-                Public Vercel build. Explore the browser-safe IDE with a
-                curated MCP manifest, replay traces, A2A checks, and export
-                previews. Local stdio, OS keychain, and OTLP listener are
-                desktop-only.
+        {hostedPreviewMode && (
+          <div className="preview-status" role="status">
+            <span className="preview-status-copy">
+              <span className="status-indicator" aria-hidden="true" />
+              <span className="preview-status-text">
+                Hosted preview · synthetic fixtures · local-only
               </span>
-            </div>
-            <div className="demo-banner-actions">
-              <a className="secondary-button" href={docsUrl}>
-                <BookOpen aria-hidden="true" size={14} />
+            </span>
+            <span className="preview-status-links">
+              <a href={docsUrl}>
+                <BookOpen aria-hidden="true" size={13} />
                 Docs
               </a>
-              <a className="secondary-button" href={repoUrl}>
-                <Github aria-hidden="true" size={14} />
-                GitHub
+              <a href={desktopReleaseUrl} target="_blank" rel="noreferrer">
+                <Download aria-hidden="true" size={13} />
+                Desktop
               </a>
-              <a className="primary-button" href={demoBrowserUrl}>
-                Browser IDE
-              </a>
-            </div>
+            </span>
           </div>
         )}
 
         <div className="surface-wrap">
           {state.activeSurface === "connect" && (
             <Section
-              eyebrow="MCP · stdio · sse · http · websocket"
-              title={
-                <>
-                  Connect. <em>Inspect.</em>
-                </>
-              }
-              description="Spin up a local server or attach to a remote endpoint. Manifest, risk findings, and stdio lifecycle are inline. Every byte stays on this machine."
+              eyebrow="MCP endpoint"
+              title="Connect endpoint"
+              description="Configure transport, inspect the discovered manifest, and review runtime evidence."
               actions={
-                <>
-                  <button
-                    className="primary-button"
-                    onClick={() => void runConnect()}
-                  >
-                    <Play aria-hidden="true" size={14} />
-                    {demoMode ? "Run demo inspection" : "Connect"}
-                  </button>
-                  <button
-                    className="secondary-button"
-                    onClick={() =>
-                      showCliOnlyFeature(
-                        "Risk scan",
-                        "agentstudio risk-scan <path> --format json",
-                      )
-                    }
-                  >
-                    <Shield aria-hidden="true" size={14} />
-                    Risk scan
-                  </button>
-                  <button
-                    className="ghost-button"
-                    onClick={() =>
-                      setError(
-                        "Connection failed: server exited before initialize. Retry, edit command, or view logs.",
-                      )
-                    }
-                  >
-                    Inspect failure
-                  </button>
-                </>
+                <button
+                  className="primary-button"
+                  onClick={() => void runConnect()}
+                >
+                  <Play aria-hidden="true" size={14} />
+                  {demoMode ? "Inspect endpoint" : "Connect"}
+                </button>
               }
             >
               <div className="split-2-3">
@@ -1350,7 +1545,7 @@ export function App() {
                     {(["stdio", "sse", "http", "websocket"] as const).map(
                       (transport) => {
                         const blocked =
-                          state.edition === "browser" && transport === "stdio";
+                          !runtime.localProcesses && transport === "stdio";
                         return (
                           <button
                             key={transport}
@@ -1438,7 +1633,7 @@ export function App() {
                       />
                     </>
                   )}
-                  {state.edition === "browser" && (
+                  {!runtime.localProcesses && (
                     <Notice tone="info">
                       Browser edition disables stdio and the local OTLP
                       receiver; remote SSE, HTTP, WebSocket, A2A, and IndexedDB
@@ -1459,13 +1654,9 @@ export function App() {
 
           {state.activeSurface === "compose" && (
             <Section
-              eyebrow="Compose · schema-aware tool calls and model loop"
-              title={
-                <>
-                  Send. <em>Replay.</em> Keep the trace.
-                </>
-              }
-              description="Pick a tool, build a payload against its schema, capture the response, and keep the resulting transcript in your local trace store, where every replay starts."
+              eyebrow="Schema-aware request"
+              title="Compose tool call"
+              description="Build and validate a payload, then capture the response into the local trace store."
               actions={
                 <>
                   <button className="primary-button" onClick={runToolCall}>
@@ -1548,7 +1739,7 @@ export function App() {
                       onChange={(value) => setJsonValue(value ?? "")}
                       options={{
                         minimap: { enabled: false },
-                        fontSize: 12,
+                        fontSize: 13,
                         tabSize: 2,
                         wordWrap: "on",
                       }}
@@ -1620,17 +1811,13 @@ export function App() {
 
           {state.activeSurface === "traces" && (
             <Section
-              eyebrow="Trace browser · sessions · filters · full-text search"
-              title={
-                <>
-                  Every recorded session, <em>local.</em>
-                </>
-              }
-              description="Filter by name, model, status, or tag. Click a session to read it like a court transcript: every turn, every tool call, every byte stays on this machine."
+              eyebrow="Local trace store"
+              title="Trace sessions"
+              description="Filter recorded sessions and inspect each model turn, tool call, result, and timing."
               actions={
                 <>
                   <button
-                    className="secondary-button"
+                    className="primary-button"
                     onClick={() =>
                       setState((current) => ({
                         ...current,
@@ -1651,6 +1838,21 @@ export function App() {
                 </>
               }
             >
+              <div
+                className="mobile-proof-summary mobile-trace-proof"
+                data-testid="mobile-trace-proof"
+              >
+                <span>
+                  <strong>{selectedTrace.events.length}</strong> events
+                </span>
+                <span>
+                  <strong>{selectedTraceSummary.toolCalls}</strong> tool calls
+                </span>
+                <span>
+                  <strong>{selectedTraceSummary.latencyMs} ms</strong> duration
+                </span>
+                <span>Session detail and timeline below</span>
+              </div>
               <TraceBrowser
                 search={state.search}
                 setSearch={(search) =>
@@ -1667,39 +1869,20 @@ export function App() {
 
           {state.activeSurface === "replay" && (
             <Section
-              eyebrow="Record & replay · deterministic regression"
-              title={
-                <>
-                  Replay against the <em>baseline.</em>
-                </>
-              }
-              description="Re-run a session against the current server and diff every turn. Nondeterminism is treated as a finding, not a footnote: caught at the gate, signed at the packet."
+              eyebrow="Deterministic regression"
+              title="Replay run"
+              description="Re-run the selected trace and review assertion outcomes against its baseline."
               actions={
-                <>
-                  <button
-                    className="primary-button"
-                    onClick={() => void runReplay()}
-                  >
-                    <RefreshCw aria-hidden="true" size={14} />
-                    Replay
-                  </button>
-                  <button
-                    className="secondary-button"
-                    onClick={() =>
-                      setState((current) => ({
-                        ...current,
-                        errorMessage:
-                          "Replay nondeterminism detected: refund_order returned a different retry count.",
-                      }))
-                    }
-                  >
-                    <AlertTriangle aria-hidden="true" size={14} />
-                    Simulate nondeterminism
-                  </button>
-                </>
+                <button
+                  className="primary-button"
+                  onClick={() => void runReplay()}
+                >
+                  <RefreshCw aria-hidden="true" size={14} />
+                  Run replay
+                </button>
               }
             >
-              <div className="split-2-3">
+              <div className="split-2-3 replay-layout">
                 <Panel title="Replay controls" caption={selectedTrace.id}>
                   <Field
                     label="Replay JSON path"
@@ -1725,13 +1908,9 @@ export function App() {
 
           {state.activeSurface === "a2a" && (
             <Section
-              eyebrow="A2A · agent cards · capability negotiation"
-              title={
-                <>
-                  Contract testing for the <em>handshake.</em>
-                </>
-              }
-              description="Validate inter-agent contracts against the A2A spec, including lifecycle, capability negotiation, auth, and error paths."
+              eyebrow="A2A contract"
+              title="Validate agent handshake"
+              description="Check agent-card fields, capability negotiation, lifecycle, authentication, and error paths."
               actions={
                 <button
                   className="primary-button"
@@ -1761,13 +1940,9 @@ export function App() {
 
           {state.activeSurface === "observe" && (
             <Section
-              eyebrow="Observability · OTLP · Phoenix · OpenAI event traces"
-              title={
-                <>
-                  Capture every <em>span,</em> from anywhere.
-                </>
-              }
-              description="Import OTEL GenAI spans, drop Phoenix or OpenAI event traces, or run the local receiver to capture live traffic."
+              eyebrow="OTLP and trace imports"
+              title="Evidence data network"
+              description="Inspect linked spans, model turns, tool calls, replay outcomes, and release artifacts."
               actions={
                 <>
                   <button
@@ -1779,7 +1954,7 @@ export function App() {
                   </button>
                   <button
                     className="primary-button"
-                    disabled={state.edition === "browser"}
+                    disabled={!runtime.localListeners}
                     onClick={() => void toggleOtlpReceiver()}
                   >
                     <Play aria-hidden="true" size={14} />
@@ -1792,7 +1967,7 @@ export function App() {
                 <Panel
                   title="Receiver"
                   caption={
-                    state.edition === "browser"
+                    !runtime.localListeners
                       ? "Browser edition · import only"
                       : "Local · :4317 / :4318"
                   }
@@ -1818,12 +1993,12 @@ export function App() {
                   <div className="empty-state">
                     <Eye aria-hidden="true" size={22} />
                     <strong>
-                      {state.edition === "browser"
+                      {!runtime.localListeners
                         ? "OTLP receiver toggled off"
                         : "Drop OTLP JSON, proto, Phoenix JSON, or OpenAI event traces"}
                     </strong>
                     <span>
-                      {state.edition === "browser"
+                      {!runtime.localListeners
                         ? "Use file import in browser edition."
                         : "Local HTTP listens on :4318 and gRPC on :4317."}
                     </span>
@@ -1840,8 +2015,8 @@ export function App() {
                   </button>
                 </Panel>
                 <Panel
-                  title="Span timeline"
-                  caption={`${runtimeSpans.length} spans · ${runtimeSpans.filter((s) => s.status === "error").length} error`}
+                  title="Evidence network"
+                  caption={`${runtimeSpans.length} linked spans · ${runtimeSpans.filter((s) => s.status === "error").length} blocked`}
                 >
                   <SpanTimeline spans={runtimeSpans} />
                   <button
@@ -1857,13 +2032,9 @@ export function App() {
 
           {state.activeSurface === "compare" && (
             <Section
-              eyebrow="Regression matrix across models"
-              title={
-                <>
-                  The matrix is the <em>argument.</em>
-                </>
-              }
-              description="Verified presets plus any custom model ID. Compare turn-by-turn behavior: drift, paraphrase, extra retries, refusals, against the trace you already trust."
+              eyebrow="Cross-model regression"
+              title="Compare behavior"
+              description="Compare tool sequence, arguments, policy decisions, retries, and final responses."
               actions={
                 <button
                   className="primary-button"
@@ -1944,18 +2115,15 @@ export function App() {
 
           {state.activeSurface === "ship" && (
             <Section
-              eyebrow="Export regression artifacts · CI · PR · intake"
+              eyebrow="CI and release artifacts"
               a11yTitle="Ship"
-              title={
-                <>
-                  Ship the <em>evidence,</em> not the adjectives.
-                </>
-              }
-              description="Package the selected suite into CI artifacts, PR comments, or an AuraOne intake bundle. Every artifact is reproducible from the trace, signed at the gate."
+              title="Export for CI"
+              description="Package the selected suite as workflow, JUnit, PR, trace-card, or AuraOne intake evidence."
               actions={
                 <button
                   className="primary-button"
-                  onClick={() => setTraceCardModalOpen(true)}
+                  disabled={exportStatuses.bundle?.state === "running"}
+                  onClick={() => void runExportBundle()}
                 >
                   <Download aria-hidden="true" size={14} />
                   Export bundle
@@ -1963,12 +2131,29 @@ export function App() {
               }
             >
               <Notice tone="info">
-                Ship exports call the CLI runtime when an input path and output
-                path are supplied.
+                Browser exports download deterministic local artifacts. Desktop
+                card exports call the matching CLI kind with the paths below.
               </Notice>
+              <ExportStatusLine
+                status={exportStatuses.bundle}
+                idleMessage="Bundle ready · workflow, JUnit, PR, intake, and trace card"
+              />
+              <div
+                className="mobile-proof-summary mobile-ship-proof"
+                data-testid="mobile-ship-proof"
+              >
+                <span>
+                  <strong>5</strong> artifacts
+                </span>
+                <span>Workflow</span>
+                <span>JUnit</span>
+                <span>PR report</span>
+                <span>Intake</span>
+                <span>Trace card</span>
+              </div>
               <Panel title="Export target" caption="CLI runtime">
                 <Field
-                  label="Input trace/store path"
+                  label="Current runtime input path"
                   value={exportInput}
                   onChange={setExportInput}
                   placeholder="agentstudio-live.ast"
@@ -1981,39 +2166,29 @@ export function App() {
                 />
               </Panel>
               <div className="ship-grid">
-                <ExportCard
-                  title="GitHub Action"
-                  caption=".github/workflows/agent-studio.yml"
-                  value={exportBundle.workflow}
-                />
-                <ExportCard
-                  title="JUnit"
-                  caption="junit.xml"
-                  value={exportBundle.junit}
-                />
-                <ExportCard
-                  title="PR comment"
-                  caption="Markdown report"
-                  value={exportBundle.prComment}
-                />
-                <ExportCard
-                  title="AuraOne intake"
-                  caption="auraonepkg.agent-studio.v1"
-                  value={exportBundle.intakeManifest}
-                />
+                {exportArtifactDefinitions
+                  .filter((definition) => definition.kind !== "trace-card")
+                  .map((definition) => (
+                    <ExportCard
+                      key={definition.kind}
+                      title={definition.title}
+                      caption={definition.caption}
+                      value={exportBundle[definition.bundleKey]}
+                      kind={definition.kind}
+                      inputRequirement={definition.inputRequirement}
+                      status={exportStatuses[definition.kind]}
+                      onExport={() => void exportArtifact(definition.kind)}
+                    />
+                  ))}
               </div>
             </Section>
           )}
 
           {state.activeSurface === "settings" && (
             <Section
-              eyebrow="Models, Privacy, Sandbox, Updates, Telemetry"
-              title={
-                <>
-                  Settings, <em>local-first.</em>
-                </>
-              }
-              description="Configuration is local. Provider keys never leave the OS keychain on desktop, or the passphrase-protected storage in the browser."
+              eyebrow="Workspace configuration"
+              title="Settings"
+              description="Manage models, local credentials, privacy, sandbox, updates, and telemetry."
               actions={
                 <>
                   <button
@@ -2043,7 +2218,7 @@ export function App() {
                 <Panel
                   title="Provider keys"
                   caption={
-                    state.edition === "desktop"
+                    runtime.osKeychain
                       ? "OS keychain"
                       : "Passphrase-protected browser storage"
                   }
@@ -2198,7 +2373,7 @@ export function App() {
                 <Panel title="Privacy & telemetry">
                   <ToggleRow
                     label="Telemetry opt-in"
-                    description="Aggregated counts only. No prompts, tool outputs, or keys."
+                    description="Consent preference only in this build. Redacted events stay local because no uploader is installed."
                     checked={telemetryOptIn}
                     onChange={handleTelemetryToggle}
                   />
@@ -2223,68 +2398,119 @@ export function App() {
                 <Panel title="Sandbox & updates">
                   <ToggleRow
                     label="Sandbox stdio servers"
-                    description="Containerized exec with denied network egress by default."
-                    checked
+                    description={
+                      runtime.localProcesses
+                        ? "Containerized exec with denied network egress by default."
+                        : "Unavailable in the browser runtime."
+                    }
+                    checked={runtime.localProcesses}
                     onChange={() => undefined}
                   />
                   <ToggleRow
                     label="Verify signed update manifests"
-                    description="Reject unsigned releases. Reads from the AuraOne update channel."
-                    checked
+                    description={
+                      runtime.tauri
+                        ? "Reject unsigned releases. Reads from the AuraOne update channel."
+                        : "Desktop updates are unavailable in the browser runtime."
+                    }
+                    checked={runtime.tauri}
                     onChange={() => undefined}
                   />
+                  <div className="update-row" role="status" aria-live="polite">
+                    <div>
+                      <strong>
+                        {runtime.tauri
+                          ? "Desktop release channel"
+                          : "Desktop updates unavailable"}
+                      </strong>
+                      <span>
+                        {updateChecking
+                          ? "Checking signed release metadata..."
+                          : updateResult?.status === "current"
+                            ? `Agent Studio Open ${appVersion} is current.`
+                            : updateResult?.status === "available"
+                              ? `Signed version ${updateResult.version} is available. ${updateResult.notes}`
+                              : updateResult?.status === "unavailable" ||
+                                  updateResult?.status === "error"
+                                ? updateResult.reason
+                                : `${updateChannel} channel, signed manifests required.`}
+                      </span>
+                    </div>
+                    <button
+                      className="secondary-button compact"
+                      disabled={updateChecking}
+                      onClick={async () => {
+                        setUpdateChecking(true);
+                        setUpdateResult(await checkForAgentStudioUpdate());
+                        setUpdateChecking(false);
+                      }}
+                    >
+                      <RefreshCw
+                        aria-hidden="true"
+                        size={13}
+                        className={updateChecking ? "spin" : undefined}
+                      />
+                      Check for updates
+                    </button>
+                  </div>
                   <StatusPill
                     tone="success"
                     dot
-                    label="MIT licensed · v0.8.4"
+                    label={`MIT licensed · v${appVersion}`}
                   />
                 </Panel>
                 <Panel title="Intake signing" caption={installKeyStatus}>
                   <button
                     className="secondary-button compact"
+                    disabled={!runtime.intakeSigning}
                     onClick={() => void ensureInstallKeypair()}
                   >
                     <Shield aria-hidden="true" size={13} />
-                    Ensure install key
+                    {runtime.intakeSigning
+                      ? "Ensure install key"
+                      : "Desktop only"}
                   </button>
                   <Notice tone="info">
-                    AuraOne intake exports reuse the shared platform keychain
-                    scope for the local Ed25519 install keypair.
+                    {runtime.intakeSigning
+                      ? "AuraOne intake exports reuse the shared platform keychain scope for the local Ed25519 install keypair."
+                      : "Browser mode cannot access the OS keychain and never generates or persists an intake signing key."}
                   </Notice>
                 </Panel>
-                <Panel
-                  title="Telemetry event log"
-                  caption={telemetryOptIn ? "Streaming" : "Paused"}
-                  span={2}
-                >
-                  <AuraTelemetryEventLog
-                    events={toAuraTelemetryEvents(telemetryEntries)}
-                  />
-                  <pre
-                    aria-label="Telemetry event log JSON"
-                    className="code-block"
-                  >
-                    {JSON.stringify(telemetryEntries, null, 2)}
-                  </pre>
-                  {telemetryEntries.length === 0 && (
-                    <ul
-                      className="event-log"
-                      aria-label="Telemetry sample events"
-                    >
-                      {sampleTelemetryEvents.map((event) => (
-                        <li key={event.id}>
-                          <code>{event.timestamp}</code>
-                          <strong>{event.name}</strong>
-                          <span>{event.summary}</span>
-                          <StatusPill
-                            tone={event.redacted ? "success" : "warning"}
-                            label={event.redacted ? "redacted" : "raw"}
-                          />
-                        </li>
-                      ))}
-                    </ul>
+                <div className="settings-telemetry-stack">
+                  <div className="settings-telemetry-summary">
+                    <strong>Telemetry event log</strong>
+                    <div className="settings-telemetry-status">
+                      <StatusPill
+                        tone={telemetryOptIn ? "success" : "neutral"}
+                        label={
+                          telemetryOptIn
+                            ? "Local preview"
+                            : "Recording locally"
+                        }
+                      />
+                      <StatusPill tone="neutral" label="Not sent" />
+                    </div>
+                  </div>
+                  {telemetryEntries.length ? (
+                    <>
+                      <AuraTelemetryEventLog
+                        events={toAuraTelemetryEvents(telemetryEntries)}
+                      />
+                      <pre
+                        aria-label="Telemetry event log JSON"
+                        className="code-block"
+                      >
+                        {JSON.stringify(localTelemetryEntries, null, 2)}
+                      </pre>
+                    </>
+                  ) : (
+                    <EmptyState
+                      icon={Activity}
+                      title="No local telemetry events"
+                      body="Use an audited protocol surface to record a redacted local preview. This build does not send events."
+                    />
                   )}
-                </Panel>
+                </div>
                 <Panel
                   title="Empty and error state library"
                   caption="Reference inventory"
@@ -2298,100 +2524,255 @@ export function App() {
         </div>
       </main>
 
-      {state.commandPaletteOpen && (
-        <div
-          className="modal-backdrop"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Command palette"
-          onClick={(event) => {
-            if (event.target === event.currentTarget) {
-              setState((current) => ({
-                ...current,
-                commandPaletteOpen: false,
-              }));
-            }
-          }}
+      <nav
+        className="mobile-nav"
+        aria-label="Agent Studio mobile navigation"
+      >
+        {mobilePrimarySurfaces.map((surfaceId) => {
+          const surface = surfaces.find((item) => item.id === surfaceId);
+          const Icon = surfaceIcons[surfaceId];
+          const isActive = state.activeSurface === surfaceId;
+          return (
+            <button
+              key={surfaceId}
+              className={isActive ? "active" : undefined}
+              data-surface={surfaceId}
+              aria-label={`Open ${surface?.label ?? surfaceId} workspace`}
+              aria-current={isActive ? "page" : undefined}
+              onClick={() =>
+                setState((current) => ({
+                  ...current,
+                  activeSurface: surfaceId,
+                }))
+              }
+            >
+              <Icon aria-hidden="true" size={18} />
+              <span>{surface?.label}</span>
+            </button>
+          );
+        })}
+        <button
+          className={
+            mobilePrimarySurfaces.includes(state.activeSurface)
+              ? undefined
+              : "active"
+          }
+          aria-label="More workspace tools"
+          aria-current={
+            mobilePrimarySurfaces.includes(state.activeSurface)
+              ? undefined
+              : "page"
+          }
+          onClick={() =>
+            setState((current) => ({ ...current, commandPaletteOpen: true }))
+          }
         >
-          <div className="command-palette">
-            <div className="command-input">
-              <Search aria-hidden="true" size={15} />
-              <input
-                autoFocus
-                aria-label="Search commands"
-                placeholder="Search commands, surfaces, exports…"
-              />
-              <kbd>esc</kbd>
-            </div>
-            <div className="command-list">
-              {surfaceCommands.map((command) => {
-                const meta = surfaces.find(
-                  (surface) => surface.id === command.surface,
-                );
-                const Icon = meta ? surfaceIcons[meta.id] : Command;
-                return (
-                  <button
-                    key={command.id}
-                    onClick={() =>
-                      setState((current) => ({
-                        ...current,
-                        activeSurface: command.surface,
-                        commandPaletteOpen: false,
-                      }))
-                    }
-                  >
-                    <Icon aria-hidden="true" size={14} />
-                    <span>{command.title}</span>
-                    <kbd>{command.key}</kbd>
-                  </button>
-                );
-              })}
-            </div>
+          <MoreHorizontal aria-hidden="true" size={18} />
+          <span>More</span>
+        </button>
+      </nav>
+
+      {state.commandPaletteOpen && (
+        <ModalDialog
+          labelledBy="command-palette-title"
+          panelClassName="command-palette"
+          onClose={() =>
+            setState((current) => ({
+              ...current,
+              commandPaletteOpen: false,
+            }))
+          }
+        >
+          <h2 className="sr-only" id="command-palette-title">
+            Workspace commands
+          </h2>
+          <div className="command-input">
+            <Search aria-hidden="true" size={15} />
+            <input
+              data-modal-initial-focus
+              aria-label="Search commands"
+              placeholder="Search commands, surfaces, exports…"
+            />
+            <kbd>esc</kbd>
           </div>
-        </div>
+          <div className="command-list">
+            {surfaceCommands.map((command) => {
+              const meta = surfaces.find(
+                (surface) => surface.id === command.surface,
+              );
+              const Icon = meta ? surfaceIcons[meta.id] : Command;
+              return (
+                <button
+                  key={command.id}
+                  data-surface={command.surface}
+                  onClick={() =>
+                    setState((current) => ({
+                      ...current,
+                      activeSurface: command.surface,
+                      commandPaletteOpen: false,
+                    }))
+                  }
+                >
+                  <Icon aria-hidden="true" size={14} />
+                  <span>{command.title}</span>
+                  <kbd>{command.key}</kbd>
+                </button>
+              );
+            })}
+          </div>
+        </ModalDialog>
       )}
 
       {traceCardModalOpen && (
-        <div
-          className="modal-backdrop"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Trace card export modal"
+        <ModalDialog
+          labelledBy="trace-card-export-title"
+          panelClassName="export-modal"
+          onClose={() => setTraceCardModalOpen(false)}
         >
-          <div className="export-modal">
-            <div className="modal-heading">
-              <div>
-                <span>Trace card export</span>
-                <strong>{selectedTrace.name}</strong>
-              </div>
-              <button
-                className="icon-button"
-                aria-label="Close trace card export"
-                onClick={() => setTraceCardModalOpen(false)}
-              >
-                <XCircle aria-hidden="true" size={15} />
-              </button>
+          <div className="modal-heading">
+            <div>
+              <span>Trace card export</span>
+              <strong id="trace-card-export-title">
+                {selectedTrace.name}
+              </strong>
             </div>
-            <TraceSummary trace={selectedTrace} />
-            <CodeBlock value={exportBundle.traceCard} label="trace-card.json" />
-            <div className="button-row right">
-              <button
-                className="ghost-button"
-                onClick={() => setTraceCardModalOpen(false)}
-              >
-                Close
-              </button>
-              <button
-                className="primary-button"
-                onClick={() => void exportTraceCard()}
-              >
-                <Download aria-hidden="true" size={14} />
-                Export trace card
-              </button>
-            </div>
+            <button
+              className="icon-button"
+              data-modal-initial-focus
+              aria-label="Close trace card export"
+              onClick={() => setTraceCardModalOpen(false)}
+            >
+              <XCircle aria-hidden="true" size={15} />
+            </button>
           </div>
-        </div>
+          <TraceSummary trace={selectedTrace} />
+          <CodeBlock value={exportBundle.traceCard} label="trace-card.json" />
+          <ExportStatusLine
+            status={exportStatuses["trace-card"]}
+            idleMessage="Ready for local download or desktop trace-card export"
+          />
+          <div className="button-row right">
+            <button
+              className="ghost-button"
+              onClick={() => setTraceCardModalOpen(false)}
+            >
+              Close
+            </button>
+            <button
+              className="primary-button"
+              disabled={exportStatuses["trace-card"]?.state === "running"}
+              onClick={() => void exportArtifact("trace-card")}
+            >
+              <Download aria-hidden="true" size={14} />
+              Export trace card
+            </button>
+          </div>
+        </ModalDialog>
       )}
+    </div>
+  );
+}
+
+function ModalDialog({
+  labelledBy,
+  panelClassName,
+  onClose,
+  children,
+}: {
+  labelledBy: string;
+  panelClassName: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const restoreFocusRef = useRef<HTMLElement | null>(null);
+
+  const focusableElements = () => {
+    if (!dialogRef.current) return [];
+    return Array.from(
+      dialogRef.current.querySelectorAll<HTMLElement>(
+        [
+          "button:not([disabled])",
+          "input:not([disabled])",
+          "select:not([disabled])",
+          "textarea:not([disabled])",
+          "a[href]",
+          "[tabindex]:not([tabindex='-1'])",
+        ].join(","),
+      ),
+    ).filter(
+      (element) =>
+        !element.hasAttribute("hidden") &&
+        getComputedStyle(element).visibility !== "hidden",
+    );
+  };
+
+  useEffect(() => {
+    restoreFocusRef.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    const frame = window.requestAnimationFrame(() => {
+      const initial =
+        dialogRef.current?.querySelector<HTMLElement>(
+          "[data-modal-initial-focus]",
+        ) ??
+        focusableElements()[0] ??
+        dialogRef.current;
+      initial?.focus();
+    });
+    return () => {
+      window.cancelAnimationFrame(frame);
+      const restoreTarget = restoreFocusRef.current;
+      window.setTimeout(() => restoreTarget?.focus(), 0);
+    };
+  }, []);
+
+  const onKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      onClose();
+      return;
+    }
+    if (event.key !== "Tab") return;
+
+    const focusable = focusableElements();
+    if (focusable.length === 0) {
+      event.preventDefault();
+      dialogRef.current?.focus();
+      return;
+    }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const active = document.activeElement;
+    if (event.shiftKey && (active === first || !dialogRef.current?.contains(active))) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && active === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+
+  return (
+    <div
+      className="modal-backdrop"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div
+        ref={dialogRef}
+        className={panelClassName}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={labelledBy}
+        tabIndex={-1}
+        onKeyDown={onKeyDown}
+      >
+        {children}
+      </div>
     </div>
   );
 }
@@ -2529,9 +2910,9 @@ function ManifestInspector({ manifest }: { manifest: Manifest }) {
   return (
     <div className="manifest-inspector">
       <div className="stats-row">
-        <Stat label="Tools" value={String(manifest.tools.length)} />
-        <Stat label="Resources" value={String(manifest.resources.length)} />
-        <Stat label="Prompts" value={String(manifest.prompts.length)} />
+        <Stat label="Tools" value={String(manifest.tools.length)} numeric />
+        <Stat label="Resources" value={String(manifest.resources.length)} numeric />
+        <Stat label="Prompts" value={String(manifest.prompts.length)} numeric />
       </div>
       {manifest.tools.length === 0 &&
         manifest.resources.length === 0 &&
@@ -2620,6 +3001,11 @@ function TraceBrowser(props: {
   onSelect: (traceId: string) => void;
   sessions: TraceSession[];
 }) {
+  const selected =
+    props.sessions.find((session) => session.id === props.selectedTraceId) ??
+    props.sessions[0] ??
+    emptyTrace;
+
   return (
     <div className="trace-grid">
       <Panel title="Sessions" caption={`${props.sessions.length} local`}>
@@ -2648,13 +3034,29 @@ function TraceBrowser(props: {
               <button
                 className={
                   props.selectedTraceId === session.id
-                    ? "trace-card active"
-                    : "trace-card"
+                    ? "trace-session-row active"
+                    : "trace-session-row"
                 }
                 onClick={() => props.onSelect(session.id)}
               >
-                <div className="trace-card-head">
+                <span className="trace-session-main">
                   <strong>{session.name}</strong>
+                  <code>{session.model}</code>
+                </span>
+                <span className="trace-session-metric">
+                  <span>Time</span>
+                  <strong>{session.createdAt.slice(11, 19)}</strong>
+                </span>
+                <span className="trace-session-metric">
+                  <span>Duration</span>
+                  <strong>{summary.latencyMs} ms</strong>
+                </span>
+                <span className="trace-session-metric">
+                  <span>Cost</span>
+                  <strong>${summary.costUsd.toFixed(4)}</strong>
+                </span>
+                <span className="trace-session-status">
+                  <span className="trace-session-status-label">Status</span>
                   <StatusPill
                     tone={
                       session.status === "passed"
@@ -2665,13 +3067,7 @@ function TraceBrowser(props: {
                     }
                     label={session.status}
                   />
-                </div>
-                <div className="trace-card-meta">
-                  <code>{session.model}</code>
-                  <span>{summary.toolCalls} calls</span>
-                  <span>{summary.latencyMs} ms</span>
-                  <span>${summary.costUsd.toFixed(4)}</span>
-                </div>
+                </span>
               </button>
             );
           }}
@@ -2679,23 +3075,27 @@ function TraceBrowser(props: {
       </Panel>
       <Panel
         title="Session detail"
-        caption={
-          (
-            props.sessions.find(
-              (session) => session.id === props.selectedTraceId,
-            ) ?? emptyTrace
-          ).model
-        }
+        caption={selected.id}
       >
-        <Timeline
-          events={
-            (
-              props.sessions.find(
-                (session) => session.id === props.selectedTraceId,
-              ) ?? emptyTrace
-            ).events
-          }
-        />
+        <div className="trace-detail-summary">
+          <div>
+            <span>Session</span>
+            <strong>{selected.name}</strong>
+          </div>
+          <div>
+            <span>Model</span>
+            <code>{selected.model}</code>
+          </div>
+          <div>
+            <span>Started</span>
+            <code>{selected.createdAt.slice(11, 19)} UTC</code>
+          </div>
+          <div>
+            <span>Events</span>
+            <strong>{selected.events.length}</strong>
+          </div>
+        </div>
+        <Timeline events={selected.events} />
       </Panel>
     </div>
   );
@@ -2725,7 +3125,7 @@ function StateGallery() {
     "No resources",
     "No prompts",
     "No A2A agent card loaded",
-    "No traces in Observe",
+    "No traces in Data network",
     "No test suites",
     "Ship: no suite selected",
   ];
@@ -2787,27 +3187,36 @@ function TimelineRow({
   as?: "div" | "li";
   event: TimelineEvent;
 }) {
+  const kindLabel = event.kind.replace("-", " ");
   return (
     <Component className={`timeline-row timeline-${event.kind}`}>
-      <span className={`timeline-dot ${event.kind}`} aria-hidden="true" />
-      <div>
+      <span className="timeline-rail" aria-hidden="true">
+        <span className={`timeline-dot ${event.kind}`} />
+      </span>
+      <div className="timeline-content">
         <div className="timeline-head">
-          <strong>{event.title}</strong>
+          <span className={`event-kind event-kind-${event.kind}`}>
+            {kindLabel}
+          </span>
           <time>{event.timestamp}</time>
         </div>
-        <p>{event.body}</p>
-        {(event.latencyMs || event.costUsd) && (
-          <div className="timeline-meta">
-            {event.latencyMs ? <span>{event.latencyMs} ms</span> : null}
-            {event.costUsd ? <span>${event.costUsd.toFixed(4)}</span> : null}
-          </div>
-        )}
+        <strong className="timeline-title">{event.title}</strong>
+        <p className={event.kind.includes("tool") ? "technical" : undefined}>
+          {event.body}
+        </p>
+        <div className="timeline-meta">
+          <span>latency {event.latencyMs ? `${event.latencyMs} ms` : "—"}</span>
+          <span>
+            cost {event.costUsd ? `$${event.costUsd.toFixed(4)}` : "—"}
+          </span>
+          <span>event {event.id}</span>
+        </div>
       </div>
     </Component>
   );
 }
 
-function DiffView({ result }: { result: unknown }) {
+export function DiffView({ result }: { result: unknown }) {
   if (!result) {
     return (
       <EmptyState
@@ -2815,6 +3224,86 @@ function DiffView({ result }: { result: unknown }) {
         title="No replay result"
         body="Run replay with real replay and assertion files to render the diff output."
       />
+    );
+  }
+  const replay = result as {
+    runId?: string;
+    status?: string;
+    durationMs?: number;
+    assertions?: { passed: number; review: number; failed: number };
+    changes?: Array<{
+      turn: number;
+      kind: string;
+      label: string;
+      baseline: string;
+      candidate: string;
+      verdict: string;
+    }>;
+  };
+  if (Array.isArray(replay.changes)) {
+    return (
+      <div className="replay-evidence" data-testid="replay-evidence">
+        <div className="evidence-summary">
+          <div>
+            <span>Run</span>
+            <code>{replay.runId}</code>
+          </div>
+          <div>
+            <span>Duration</span>
+            <strong>{replay.durationMs} ms</strong>
+          </div>
+          <div>
+            <span>Assertions</span>
+            <strong>{replay.assertions?.passed} passed</strong>
+          </div>
+          <StatusPill
+            tone={
+              replay.status === "passed"
+                ? "success"
+                : replay.status === "failed"
+                  ? "danger"
+                  : "warning"
+            }
+            label={replay.status ?? "review"}
+          />
+        </div>
+        <div className="diff-events">
+          {replay.changes.map((change) => (
+            <article className="diff-event" key={`${change.turn}-${change.kind}`}>
+              <header>
+                <span>
+                  Turn {change.turn} · {change.kind}
+                </span>
+                <StatusPill
+                  tone={change.verdict === "review" ? "warning" : "success"}
+                  label={change.verdict}
+                />
+              </header>
+              <strong>{change.label}</strong>
+              <div className="diff-pair">
+                <div>
+                  <span>Baseline</span>
+                  <code
+                    tabIndex={0}
+                    aria-label={`Baseline evidence for ${change.label}`}
+                  >
+                    {change.baseline}
+                  </code>
+                </div>
+                <div>
+                  <span>Candidate</span>
+                  <code
+                    tabIndex={0}
+                    aria-label={`Candidate evidence for ${change.label}`}
+                  >
+                    {change.candidate}
+                  </code>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
     );
   }
   return (
@@ -2890,7 +3379,7 @@ function SpanTimeline({ spans }: { spans: Span[] }) {
   );
 }
 
-function CompareMatrix({
+export function CompareMatrix({
   selectedModels,
   result,
 }: {
@@ -2915,6 +3404,89 @@ function CompareMatrix({
       />
     );
   }
+  const comparison = result as {
+    runId?: string;
+    durationMs?: number;
+    columns?: string[];
+    rows?: Array<{
+      label: string;
+      values: Array<{ verdict: string; detail: string }>;
+    }>;
+    summary?: Array<{
+      model: string;
+      passed: number;
+      review: number;
+      failed: number;
+      latencyMs: number;
+      costUsd: number;
+    }>;
+  };
+  if (Array.isArray(comparison.rows) && Array.isArray(comparison.columns)) {
+    return (
+      <div className="comparison-evidence" data-testid="comparison-evidence">
+        <div className="comparison-run">
+          <span>Run <code>{comparison.runId}</code></span>
+          <span>{comparison.durationMs} ms</span>
+        </div>
+        <div
+          className="comparison-table"
+          style={{
+            gridTemplateColumns: `minmax(132px, .8fr) repeat(${comparison.columns.length}, minmax(150px, 1fr))`,
+          }}
+        >
+          <div className="comparison-head">Check</div>
+          {comparison.columns.map((model) => (
+            <div className="comparison-head" key={model}>
+              <code>{model}</code>
+            </div>
+          ))}
+          {comparison.rows.map((row) => (
+            <Fragment key={row.label}>
+              <div className="comparison-label">{row.label}</div>
+              {row.values.map((value, index) => (
+                <div
+                  className={`comparison-cell comparison-${value.verdict}`}
+                  key={`${row.label}-${comparison.columns?.[index]}`}
+                >
+                  <span className="matrix-dot" aria-hidden="true" />
+                  <span>
+                    <strong>{value.verdict}</strong>
+                    <small>{value.detail}</small>
+                  </span>
+                </div>
+              ))}
+            </Fragment>
+          ))}
+        </div>
+        <div className="comparison-mobile-cards" aria-label="Model comparison results">
+          {comparison.rows.map((row) => (
+            <article key={row.label}>
+              <strong>{row.label}</strong>
+              {row.values.map((value, index) => (
+                <div key={`${row.label}-mobile-${comparison.columns?.[index]}`}>
+                  <code>{comparison.columns?.[index]}</code>
+                  <span className={`comparison-verdict comparison-${value.verdict}`}>
+                    <span className="matrix-dot" aria-hidden="true" />
+                    <strong>{value.verdict}</strong>
+                  </span>
+                  <small>{value.detail}</small>
+                </div>
+              ))}
+            </article>
+          ))}
+        </div>
+        <div className="model-results">
+          {comparison.summary?.map((item) => (
+            <div key={item.model}>
+              <code>{item.model}</code>
+              <span>{item.passed} pass · {item.review} review</span>
+              <span>{item.latencyMs} ms · ${item.costUsd.toFixed(4)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
   return (
     <CodeBlock
       value={JSON.stringify(result, null, 2)}
@@ -2927,14 +3499,26 @@ function ExportCard({
   title,
   caption,
   value,
+  kind,
+  inputRequirement,
+  status,
+  onExport,
 }: {
   title: string;
   caption: string;
   value: string;
+  kind: ArtifactExportKind;
+  inputRequirement: string;
+  status?: ExportOperationStatus;
+  onExport: () => void;
 }) {
   return (
     <Panel title={title} caption={caption}>
       <CodeBlock value={value} label={caption} />
+      <ExportStatusLine
+        status={status}
+        idleMessage={`Runtime input · ${inputRequirement}`}
+      />
       <div className="button-row right">
         <button
           className="ghost-button"
@@ -2943,12 +3527,50 @@ function ExportCard({
           <Copy aria-hidden="true" size={13} />
           Copy
         </button>
-        <button className="secondary-button">
+        <button
+          className="secondary-button"
+          aria-label={`Export ${title}`}
+          data-export-kind={kind}
+          disabled={status?.state === "running"}
+          onClick={onExport}
+        >
           <Download aria-hidden="true" size={13} />
           Export
         </button>
       </div>
     </Panel>
+  );
+}
+
+function ExportStatusLine({
+  status,
+  idleMessage,
+}: {
+  status?: ExportOperationStatus;
+  idleMessage: string;
+}) {
+  const resolved = status ?? { state: "idle" as const, message: idleMessage };
+  const Icon =
+    resolved.state === "success"
+      ? CheckCircle2
+      : resolved.state === "error"
+        ? AlertTriangle
+        : resolved.state === "running"
+          ? RefreshCw
+          : CircleDashed;
+  return (
+    <div
+      className={`export-operation export-operation-${resolved.state}`}
+      role={resolved.state === "error" ? "alert" : "status"}
+      aria-live="polite"
+    >
+      <Icon
+        aria-hidden="true"
+        className={resolved.state === "running" ? "spin" : undefined}
+        size={14}
+      />
+      <span>{resolved.message}</span>
+    </div>
   );
 }
 
@@ -2958,9 +3580,9 @@ function TraceSummary({ trace }: { trace: TraceSession }) {
     <div className="stats-row">
       <Stat label="Trace" value={trace.name} />
       <Stat label="Model" value={trace.model} mono />
-      <Stat label="Tool calls" value={String(summary.toolCalls)} />
-      <Stat label="Latency" value={`${summary.latencyMs} ms`} />
-      <Stat label="Cost" value={`$${summary.costUsd.toFixed(4)}`} />
+      <Stat label="Tool calls" value={String(summary.toolCalls)} numeric />
+      <Stat label="Latency" value={`${summary.latencyMs} ms`} mono />
+      <Stat label="Cost" value={`$${summary.costUsd.toFixed(4)}`} numeric />
     </div>
   );
 }
@@ -3134,15 +3756,24 @@ function Stat({
   label,
   value,
   mono,
+  numeric,
 }: {
   label: string;
   value: string;
   mono?: boolean;
+  numeric?: boolean;
 }) {
+  const valueClassName = [
+    mono ? "mono" : "",
+    numeric ? "numeric" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
     <div className="stat">
       <span>{label}</span>
-      <strong className={mono ? "mono" : undefined}>{value}</strong>
+      <strong className={valueClassName || undefined}>{value}</strong>
     </div>
   );
 }

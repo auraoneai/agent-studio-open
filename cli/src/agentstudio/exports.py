@@ -1,15 +1,22 @@
 from __future__ import annotations
 
 import json
+import hashlib
+import os
 import shutil
 import zipfile
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from html import escape
 from pathlib import Path
 from typing import Any
 
+from . import __version__
 from .trace_store import TraceStore
 
+
+EVIDENCE_SCHEMA = "agentstudio.export-evidence.v1"
+EVIDENCE_MANIFEST = "agentstudio-export-manifest.json"
 
 WORKFLOW = """name: Agent regression
 on: [pull_request]
@@ -41,6 +48,112 @@ class DiffResult:
 
     def to_dict(self) -> dict[str, Any]:
         return {"passed": self.passed, "differences": self.differences, "baseline": self.baseline, "candidate": self.candidate}
+
+
+def build_export_evidence(
+    *,
+    kind: str,
+    source: str | Path,
+    destination: str | Path,
+    artifact_filename: str,
+    artifact_format: str,
+    media_type: str,
+    files: list[tuple[str, bytes, str, str]],
+    replay_result: Any = None,
+    comparison_result: Any = None,
+    generated_at: str | None = None,
+) -> dict[str, Any]:
+    source_path = Path(source)
+    source_descriptor = _source_trace_descriptor(source_path)
+    file_evidence = [
+        {
+            "path": path,
+            "format": file_format,
+            "mediaType": file_media_type,
+            "bytes": len(content),
+            "sha256": _sha256(content),
+        }
+        for path, content, file_media_type, file_format in files
+    ]
+    return {
+        "schema": EVIDENCE_SCHEMA,
+        "generatedAt": generated_at or _generated_at(),
+        "sourceBuild": {
+            "product": "Agent Studio Open",
+            "version": __version__,
+            "commit": os.environ.get("AGENT_STUDIO_SOURCE_COMMIT", f"package-{__version__}"),
+            "state": os.environ.get("AGENT_STUDIO_SOURCE_STATE", "installed-runtime"),
+            "sourceDigest": os.environ.get("AGENT_STUDIO_SOURCE_DIGEST")
+            or _directory_digest(Path(__file__).resolve().parent),
+        },
+        "sourceTrace": source_descriptor,
+        "replay": {
+            "state": _replay_state(replay_result),
+            "result": replay_result,
+        },
+        "comparison": {
+            "state": _comparison_state(comparison_result),
+            "result": comparison_result,
+        },
+        "destination": {
+            "mode": "filesystem",
+            "path": str(destination),
+        },
+        "artifact": {
+            "kind": kind,
+            "filename": artifact_filename,
+            "format": artifact_format,
+            "mediaType": media_type,
+            "sha256": _artifact_digest(files),
+            "files": file_evidence,
+        },
+    }
+
+
+def write_export_manifest(directory: str | Path, evidence: dict[str, Any]) -> Path:
+    path = Path(directory) / EVIDENCE_MANIFEST
+    path.write_text(json.dumps(evidence, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return path
+
+
+def append_export_manifest(archive_path: str | Path, evidence: dict[str, Any]) -> None:
+    with zipfile.ZipFile(archive_path, "a", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr(EVIDENCE_MANIFEST, json.dumps(evidence, indent=2, sort_keys=True) + "\n")
+
+
+def evidence_files_from_paths(
+    paths: list[str | Path],
+    root: str | Path,
+) -> list[tuple[str, bytes, str, str]]:
+    root_path = Path(root)
+    files: list[tuple[str, bytes, str, str]] = []
+    for path_value in paths:
+        path = Path(path_value)
+        relative_path = path.relative_to(root_path).as_posix()
+        media_type, file_format = _file_contract(relative_path)
+        files.append((relative_path, path.read_bytes(), media_type, file_format))
+    return files
+
+
+def evidence_files_from_zip(
+    archive_path: str | Path,
+) -> list[tuple[str, bytes, str, str]]:
+    files: list[tuple[str, bytes, str, str]] = []
+    with zipfile.ZipFile(archive_path) as archive:
+        for name in sorted(archive.namelist()):
+            if name == EVIDENCE_MANIFEST or name.endswith("/"):
+                continue
+            media_type, file_format = _file_contract(name)
+            files.append((name, archive.read(name), media_type, file_format))
+    return files
+
+
+def add_archive_checksum(
+    evidence: dict[str, Any],
+    archive_path: str | Path,
+) -> dict[str, Any]:
+    evidence["artifact"]["archiveSha256"] = _sha256(Path(archive_path).read_bytes())
+    return evidence
 
 
 def export_github_action(regressions: str | Path, out: str | Path) -> list[str]:
@@ -199,3 +312,154 @@ def write_diff_markdown(result: DiffResult, out: str | Path) -> str:
     text = "\n".join(lines) + "\n"
     Path(out).write_text(text, encoding="utf-8")
     return text
+
+
+def _source_trace_descriptor(source: Path) -> dict[str, str]:
+    if not source.exists():
+        raise FileNotFoundError(source)
+    source_id = source.stem or source.name
+    if source.is_dir():
+        candidates = sorted(source.glob("*.json"))
+        if candidates:
+            source_id = _trace_id_from_json(candidates[0]) or source_id
+        digest = _directory_digest(source)
+    else:
+        digest = _sha256(source.read_bytes())
+        if source.suffix == ".ast":
+            store = TraceStore(source)
+            try:
+                source_id = store.first_session_id()
+            except KeyError:
+                pass
+            finally:
+                store.close()
+        elif source.suffix.lower() in {".json", ".jsonl"}:
+            source_id = _trace_id_from_json(source) or source_id
+    return {
+        "id": source_id,
+        "path": str(source),
+        "sha256": digest,
+    }
+
+
+def _trace_id_from_json(path: Path) -> str | None:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    if isinstance(payload, list):
+        payload = payload[0] if payload else {}
+    if not isinstance(payload, dict):
+        return None
+    trace = payload.get("trace")
+    if isinstance(trace, dict):
+        payload = trace
+    for key in ("trace_id", "traceId", "session_id", "sessionId", "id", "name"):
+        value = payload.get(key)
+        if isinstance(value, str) and value:
+            return value
+    return None
+
+
+def _directory_digest(root: Path) -> str:
+    digest = hashlib.sha256()
+    for path in sorted(item for item in root.rglob("*") if item.is_file()):
+        relative_path = path.relative_to(root)
+        if _ignored_generated_path(relative_path):
+            continue
+        digest.update(relative_path.as_posix().encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(path.read_bytes())
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
+def _artifact_digest(files: list[tuple[str, bytes, str, str]]) -> str:
+    digest = hashlib.sha256()
+    for path, content, _, _ in files:
+        digest.update(path.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(content)
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
+def _sha256(content: bytes) -> str:
+    return hashlib.sha256(content).hexdigest()
+
+
+def _generated_at() -> str:
+    return datetime.now(UTC).isoformat(timespec="milliseconds").replace("+00:00", "Z")
+
+
+def _replay_state(result: Any) -> str:
+    if result is None:
+        return "not-run"
+    if isinstance(result, dict):
+        state = result.get("status") or result.get("state")
+        if state in {"passed", "review", "failed"}:
+            return str(state)
+    if isinstance(result, list):
+        failed = any(not bool(item.get("ok", item.get("passed", False))) for item in result if isinstance(item, dict))
+        return "failed" if failed else "passed"
+    return "passed"
+
+
+def _comparison_state(result: Any) -> str:
+    if result is None:
+        return "not-run"
+    if isinstance(result, dict):
+        if result.get("passed") is False:
+            return "failed"
+        if result.get("passed") is True:
+            return "passed"
+        state = result.get("status") or result.get("state")
+        if state in {"passed", "review", "failed"}:
+            return str(state)
+    return "review"
+
+
+def _file_contract(path: str) -> tuple[str, str]:
+    normalized = path.replace("\\", "/")
+    if normalized == ".github/workflows/agent-regression.yml":
+        return "text/yaml", "github-actions-workflow"
+    if normalized.endswith(".assertions.yaml"):
+        return "text/yaml", "tool-call-replay-assertions"
+    if normalized.startswith("regressions/") and normalized.endswith(".json"):
+        return "application/json", "tool-call-replay"
+    if normalized == "trace-card.json":
+        return "application/json", "agent-trace-card-json"
+    if normalized == "trace.ast":
+        return "application/octet-stream", "agentstudio-trace-store"
+    if normalized.endswith(".xml"):
+        return "application/xml", "junit-xml"
+    if normalized.endswith(".md"):
+        return "text/markdown", "markdown"
+    if normalized.endswith(".zip"):
+        return "application/zip", "zip"
+    if normalized.endswith((".yaml", ".yml")):
+        return "text/yaml", "yaml"
+    if normalized.endswith(".json"):
+        return "application/json", "json"
+    return "application/octet-stream", "binary"
+
+
+def _ignored_generated_path(path: Path) -> bool:
+    ignored_directories = {
+        "__pycache__",
+        ".pytest_cache",
+        ".mypy_cache",
+        ".ruff_cache",
+        ".cache",
+        "coverage",
+        "htmlcov",
+        "dist",
+        "build",
+    }
+    if any(part in ignored_directories or part.endswith(".egg-info") for part in path.parts[:-1]):
+        return True
+    return (
+        path.name == ".DS_Store"
+        or path.suffix in {".pyc", ".pyo"}
+        or path.name == ".coverage"
+    )

@@ -114,6 +114,63 @@ export interface TraceSession {
   events: TimelineEvent[];
 }
 
+export type ReplayVerdict = "equivalent" | "pass" | "review" | "fail";
+
+export interface ReplayChange {
+  turn: number;
+  kind: string;
+  label: string;
+  baseline: string;
+  candidate: string;
+  verdict: ReplayVerdict;
+}
+
+export interface ReplayEvidence {
+  runId: string;
+  status: "passed" | "review" | "failed";
+  baseline: string;
+  candidate: string;
+  durationMs: number;
+  assertions: {
+    passed: number;
+    review: number;
+    failed: number;
+  };
+  changes: ReplayChange[];
+  exitCode?: number;
+}
+
+export type ComparisonVerdict = "pass" | "review" | "fail";
+
+export interface ComparisonCell {
+  verdict: ComparisonVerdict;
+  detail: string;
+}
+
+export interface ComparisonRow {
+  label: string;
+  values: ComparisonCell[];
+}
+
+export interface ComparisonSummary {
+  model: string;
+  passed: number;
+  review: number;
+  failed: number;
+  latencyMs: number;
+  costUsd: number;
+}
+
+export interface ComparisonEvidence {
+  runId: string;
+  baseline?: string;
+  durationMs: number;
+  columns: string[];
+  rows: ComparisonRow[];
+  summary: ComparisonSummary[];
+  exitCode?: number;
+}
+
 export interface A2ATestResult {
   id: string;
   name: string;
@@ -136,6 +193,11 @@ export interface ExportBundle {
   prComment: string;
   intakeManifest: string;
   traceCard: string;
+  sourceTrace: string;
+  regressionReplay: string;
+  regressionAssertions: string;
+  regressionReadme: string;
+  intakeReadme: string;
 }
 
 export interface StudioState {

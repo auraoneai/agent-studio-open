@@ -1,0 +1,40 @@
+{
+  "$schema": "https://schemas.auraone.ai/open-studio/platform-contracts/v1.json",
+  "platform_version": "0.3.0",
+  "url_scheme": "auraone",
+  "csp_connect_src": [
+    "'self'",
+    "https://updates.auraone.ai",
+    "https://updates2.auraone.ai",
+    "https://intake.auraone.ai",
+    "https://o.auraone.ai",
+    "https://api.anthropic.com",
+    "https://api.openai.com",
+    "https://generativelanguage.googleapis.com",
+    "http://127.0.0.1:*",
+    "http://localhost:*"
+  ],
+  "updater": {
+    "primary_endpoint": "https://updates.auraone.ai/{flagship}/{target}/{arch}/{current_version}",
+    "fallback_endpoint": "https://updates2.auraone.ai/{flagship}/{target}/{arch}/{current_version}",
+    "channels": ["stable", "beta", "nightly"],
+    "rollout_percentages": [0, 10, 25, 50, 100]
+  },
+  "telemetry": {
+    "endpoint": "https://o.auraone.ai/v1/events",
+    "schema": "../schemas/telemetry.schema.json",
+    "event_registry": "../schemas/telemetry-events.json",
+    "default_enabled": false
+  },
+  "crash_reporting": {
+    "vendor": "sentry",
+    "org": "auraone-open",
+    "default_enabled": false,
+    "scrub_rules": "./sentry-scrub.json"
+  },
+  "intake": {
+    "endpoint": "https://intake.auraone.ai/v1/packets/",
+    "schema": "../schemas/intake-packet.schema.json",
+    "role_registry": "../schemas/intake-roles.json"
+  }
+}

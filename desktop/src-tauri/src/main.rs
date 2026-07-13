@@ -71,6 +71,7 @@ struct ExportBundleRequest {
     kind: String,
     input: String,
     out: String,
+    format: Option<String>,
 }
 
 #[tauri::command]
@@ -159,25 +160,31 @@ fn trace_store_write(request: TraceStoreWriteRequest) -> Result<Value, String> {
 
 #[tauri::command]
 fn replay_run(request: ReplayRunRequest) -> Result<Value, String> {
-    run_agentstudio_json_strings(vec![
-        "--json".to_string(),
-        "replay".to_string(),
-        request.replay,
-        "--assert".to_string(),
-        request.assertions,
-    ])
+    run_agentstudio_json_strings_with_expected_nonzero(
+        vec![
+            "--json".to_string(),
+            "replay".to_string(),
+            request.replay,
+            "--assert".to_string(),
+            request.assertions,
+        ],
+        &[1],
+    )
 }
 
 #[tauri::command]
 fn compare_run(request: CompareRunRequest) -> Result<Value, String> {
-    run_agentstudio_json_strings(vec![
-        "--json".to_string(),
-        "compare".to_string(),
-        "--baseline".to_string(),
-        request.baseline,
-        "--candidate".to_string(),
-        request.candidate,
-    ])
+    run_agentstudio_json_strings_with_expected_nonzero(
+        vec![
+            "--json".to_string(),
+            "compare".to_string(),
+            "--baseline".to_string(),
+            request.baseline,
+            "--candidate".to_string(),
+            request.candidate,
+        ],
+        &[1],
+    )
 }
 
 #[tauri::command]
@@ -271,10 +278,26 @@ fn otlp_receiver_toggle(
 
 #[tauri::command]
 fn export_bundle(request: ExportBundleRequest) -> Result<Value, String> {
-    let mut args = vec!["--json".to_string(), "export".to_string(), request.kind];
-    args.push(request.input);
-    args.extend(["--out".to_string(), request.out]);
-    run_agentstudio_json_strings(args)
+    run_agentstudio_json_strings(export_bundle_args(&request)?)
+}
+
+fn export_bundle_args(request: &ExportBundleRequest) -> Result<Vec<String>, String> {
+    let mut args = vec![
+        "--json".to_string(),
+        "export".to_string(),
+        request.kind.clone(),
+        request.input.clone(),
+        "--out".to_string(),
+        request.out.clone(),
+    ];
+    if request.kind == "trace-card" {
+        let format = request.format.as_deref().unwrap_or("json");
+        if !matches!(format, "json" | "markdown" | "html") {
+            return Err(format!("unsupported trace-card format: {format}"));
+        }
+        args.extend(["--format".to_string(), format.to_string()]);
+    }
+    Ok(args)
 }
 
 #[tauri::command]
@@ -342,24 +365,52 @@ fn run_agentstudio_json(args: &[&str]) -> Result<Value, String> {
 }
 
 fn run_agentstudio_json_strings(args: Vec<String>) -> Result<Value, String> {
+    run_agentstudio_json_strings_with_expected_nonzero(args, &[])
+}
+
+fn run_agentstudio_json_strings_with_expected_nonzero(
+    args: Vec<String>,
+    expected_nonzero: &[i32],
+) -> Result<Value, String> {
     let output = agentstudio_command()
         .args(args)
         .output()
         .map_err(|error| format!("failed to launch agentstudio CLI: {error}"))?;
-    if !output.status.success() {
-        return Err(format!(
-            "agentstudio CLI failed with status {}: {}{}",
-            output.status,
-            String::from_utf8_lossy(&output.stderr),
-            String::from_utf8_lossy(&output.stdout)
-        ));
-    }
-    serde_json::from_slice(&output.stdout).map_err(|error| {
+    parse_agentstudio_json_output(
+        output.status.code().unwrap_or(-1),
+        &output.stdout,
+        &output.stderr,
+        expected_nonzero,
+    )
+}
+
+fn parse_agentstudio_json_output(
+    exit_code: i32,
+    stdout: &[u8],
+    stderr: &[u8],
+    expected_nonzero: &[i32],
+) -> Result<Value, String> {
+    let parsed = serde_json::from_slice(stdout).map_err(|error| {
         format!(
             "agentstudio CLI returned invalid JSON: {error}; stdout={}",
-            String::from_utf8_lossy(&output.stdout)
+            String::from_utf8_lossy(stdout)
         )
-    })
+    })?;
+    if exit_code == 0 {
+        return Ok(parsed);
+    }
+    if expected_nonzero.contains(&exit_code) {
+        return Ok(serde_json::json!({
+            "payload": parsed,
+            "exitCode": exit_code,
+            "expectedNonzero": true
+        }));
+    }
+    Err(format!(
+        "agentstudio CLI failed with status {exit_code}: {}{}",
+        String::from_utf8_lossy(stderr),
+        String::from_utf8_lossy(stdout)
+    ))
 }
 
 fn agentstudio_command() -> Command {
@@ -436,4 +487,66 @@ fn main() {
         ])
         .run(tauri::generate_context!())
         .expect("failed to run Agent Studio Open desktop shell");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        export_bundle_args, parse_agentstudio_json_output, ExportBundleRequest,
+    };
+
+    #[test]
+    fn retains_json_for_expected_replay_or_compare_review_exit() {
+        let value = parse_agentstudio_json_output(
+            1,
+            br#"{"passed":false,"differences":["turn 2 changed"]}"#,
+            b"",
+            &[1],
+        )
+        .expect("expected review JSON to be retained");
+
+        assert_eq!(value["exitCode"], 1);
+        assert_eq!(value["expectedNonzero"], true);
+        assert_eq!(value["payload"]["passed"], false);
+        assert_eq!(value["payload"]["differences"][0], "turn 2 changed");
+    }
+
+    #[test]
+    fn rejects_unexpected_nonzero_even_when_stdout_is_json() {
+        let error = parse_agentstudio_json_output(
+            2,
+            br#"{"error":"invalid arguments"}"#,
+            b"usage error",
+            &[1],
+        )
+        .expect_err("unexpected exit codes must remain errors");
+
+        assert!(error.contains("status 2"));
+        assert!(error.contains("invalid arguments"));
+    }
+
+    #[test]
+    fn trace_card_export_passes_an_explicit_json_format() {
+        let args = export_bundle_args(&ExportBundleRequest {
+            kind: "trace-card".to_string(),
+            input: "trace.json".to_string(),
+            out: "trace-card.json".to_string(),
+            format: None,
+        })
+        .expect("trace-card arguments should be valid");
+
+        assert_eq!(
+            args,
+            vec![
+                "--json",
+                "export",
+                "trace-card",
+                "trace.json",
+                "--out",
+                "trace-card.json",
+                "--format",
+                "json",
+            ]
+        );
+    }
 }

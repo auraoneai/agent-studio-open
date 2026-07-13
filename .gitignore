@@ -1,9 +1,9 @@
-node_modules
-dist
-.vercel
-desktop/src-tauri/target
-desktop/src-tauri/gen
-crates/*/target
-.DS_Store
+.vercel/
+dist/
+node_modules/
+packages/*/dist/
+packages/*/node_modules/
+desktop/src-tauri/target/
+cli/.pytest_cache/
+cli/**/__pycache__/
 *.pyc
-__pycache__/

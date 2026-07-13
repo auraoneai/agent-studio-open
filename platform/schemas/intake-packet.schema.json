@@ -1,0 +1,178 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.auraone.ai/open-studio/intake-packet/v1.json",
+  "title": "AuraOne Open Studio Intake Packet Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "manifest_version",
+    "product",
+    "product_version",
+    "platform_version",
+    "created_at",
+    "project_id",
+    "creator",
+    "intent",
+    "redaction",
+    "consent",
+    "payload_manifest",
+    "provenance",
+    "transport"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://schemas.auraone.ai/open-studio/intake-packet/v1.json"
+    },
+    "manifest_version": {
+      "const": "1.0.0"
+    },
+    "product": {
+      "enum": [
+        "rubric-studio-open",
+        "robotics-studio-open",
+        "agent-studio-open"
+      ]
+    },
+    "product_version": {
+      "type": "string"
+    },
+    "platform_version": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "project_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "creator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["display_name"],
+      "properties": {
+        "display_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 254
+        }
+      }
+    },
+    "intent": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    "redaction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "file_paths",
+        "hostnames",
+        "api_keys",
+        "user_pii_other_than_explicit_intake",
+        "custom_rules_applied"
+      ],
+      "properties": {
+        "file_paths": { "const": true },
+        "hostnames": { "const": true },
+        "api_keys": { "const": true },
+        "user_pii_other_than_explicit_intake": { "const": true },
+        "custom_rules_applied": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_.-]*$"
+          }
+        }
+      }
+    },
+    "consent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "user_acknowledged_preview",
+        "user_acknowledged_transport",
+        "timestamp"
+      ],
+      "properties": {
+        "user_acknowledged_preview": { "const": true },
+        "user_acknowledged_transport": { "const": true },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "payload_manifest": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "role", "sha256", "size_bytes"],
+        "properties": {
+          "path": {
+            "type": "string",
+            "pattern": "^payload/[A-Za-z0-9._/-]+$"
+          },
+          "role": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "size_bytes": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["engine_libs", "os", "os_version", "app_install_id_hash"],
+      "properties": {
+        "engine_libs": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "os": {
+          "enum": ["darwin", "windows", "linux"]
+        },
+        "os_version": {
+          "type": "string"
+        },
+        "app_install_id_hash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "transport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["destination", "intended_at"],
+      "properties": {
+        "destination": {
+          "const": "https://intake.auraone.ai/v1/packets/"
+        },
+        "intended_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  }
+}

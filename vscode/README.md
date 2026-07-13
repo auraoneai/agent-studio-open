@@ -8,4 +8,4 @@ This extension surface exposes:
 - Hover provider for risk findings on common destructive or financial MCP tools.
 - Deep link command to continue record/replay work in the desktop app.
 
-Marketplace target ID: `auraone.agent-studio`.
+Marketplace target ID: `auraone.agent-studio-open`.

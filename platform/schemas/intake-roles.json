@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.auraone.ai/open-studio/intake-roles/v1.2.json",
+  "title": "AuraOne Open Studio intake payload role registry",
+  "schema_version": "1.2.0",
+  "version": "1.2.0",
+  "description": "Canonical additive payload role registry for .auraonepkg intake packets. v1.0 covers Rubric Studio Open, v1.1 adds Robotics Studio Open, and v1.2 adds Agent Studio Open.",
+  "type": "object",
+  "required": ["schema_version", "roles"],
+  "properties": {
+    "schema_version": {
+      "const": "1.2.0"
+    },
+    "roles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["role", "introduced_in", "flagship", "contains_user_content", "raw_payload_allowed", "description"],
+        "properties": {
+          "role": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$"
+          },
+          "introduced_in": {
+            "enum": ["1.0.0", "1.1.0", "1.2.0"]
+          },
+          "flagship": {
+            "enum": ["rubric-studio-open", "robotics-studio-open", "agent-studio-open"]
+          },
+          "contains_user_content": {
+            "type": "boolean"
+          },
+          "raw_payload_allowed": {
+            "type": "boolean"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false,
+  "roles": [
+    {
+      "role": "rubric_definition",
+      "introduced_in": "1.0.0",
+      "flagship": "rubric-studio-open",
+      "contains_user_content": true,
+      "raw_payload_allowed": true,
+      "description": "The rubric TOML/JSON file."
+    },
+    {
+      "role": "rubric_criterion",
+      "introduced_in": "1.0.0",
+      "flagship": "rubric-studio-open",
+      "contains_user_content": true,
+      "raw_payload_allowed": true,
+      "description": "Individual criterion files if the rubric is sharded."
+    },
+    {
+      "role": "rubric_sample",
+      "introduced_in": "1.0.0",
+      "flagship": "rubric-studio-open",
+      "contains_user_content": true,
+      "raw_payload_allowed": true,
+      "description": "Sample responses being submitted for expert scoring."
+    },
+    {
+      "role": "rubric_calibration_set",
+      "introduced_in": "1.0.0",
+      "flagship": "rubric-studio-open",
+      "contains_user_content": true,
+      "raw_payload_allowed": true,
+      "description": "Calibration scores from prior expert raters."
+    },
+    {
+      "role": "rubric_judge_card",
+      "introduced_in": "1.0.0",
+      "flagship": "rubric-studio-open",
+      "contains_user_content": true,
+      "raw_payload_allowed": true,
+      "description": "Judge prompt plus documented biases and known failure modes."
+    },
+    {
+      "role": "rubric_eval_run_manifest",
+      "introduced_in": "1.0.0",
+      "flagship": "rubric-studio-open",
+      "contains_user_content": false,
+      "raw_payload_allowed": true,
+      "description": "Eval run manifest with seed, model versions, and content hashes."
+    },
+    {
+      "role": "robotics_reviewed_subset_manifest",
+      "introduced_in": "1.1.0",
+      "flagship": "robotics-studio-open",
+      "contains_user_content": false,
+      "raw_payload_allowed": true,
+      "description": "Training-ready reviewed subset manifest that references reviewed episodes without embedding raw video or ROS bag content."
+    },
+    {
+      "role": "robotics_episode_reference",
+      "introduced_in": "1.1.0",
+      "flagship": "robotics-studio-open",
+      "contains_user_content": false,
+      "raw_payload_allowed": false,
+      "description": "Reference, never raw video or sensor content, to a reviewed episode by ID."
+    },
+    {
+      "role": "robotics_failure_cluster",
+      "introduced_in": "1.1.0",
+      "flagship": "robotics-studio-open",
+      "contains_user_content": true,
+      "raw_payload_allowed": true,
+      "description": "Failure cluster definition."
+    },
+    {
+      "role": "robotics_intervention_note",
+      "introduced_in": "1.1.0",
+      "flagship": "robotics-studio-open",
+      "contains_user_content": true,
+      "raw_payload_allowed": true,
+      "description": "Reviewer intervention notes."
+    },
+    {
+      "role": "robotics_embodiment_card",
+      "introduced_in": "1.1.0",
+      "flagship": "robotics-studio-open",
+      "contains_user_content": true,
+      "raw_payload_allowed": true,
+      "description": "Embodiment metadata including robot type, sensors, and control mode."
+    },
+    {
+      "role": "robotics_sensor_qa_report",
+      "introduced_in": "1.1.0",
+      "flagship": "robotics-studio-open",
+      "contains_user_content": false,
+      "raw_payload_allowed": true,
+      "description": "QA report from the sensor pipeline."
+    },
+    {
+      "role": "agent_mcp_server_metadata",
+      "introduced_in": "1.2.0",
+      "flagship": "agent-studio-open",
+      "contains_user_content": true,
+      "raw_payload_allowed": false,
+      "description": "MCP server connection metadata after redaction."
+    },
+    {
+      "role": "agent_trace_card",
+      "introduced_in": "1.2.0",
+      "flagship": "agent-studio-open",
+      "contains_user_content": true,
+      "raw_payload_allowed": true,
+      "description": "Trace card describing what the agent does."
+    },
+    {
+      "role": "agent_regression_test_suite",
+      "introduced_in": "1.2.0",
+      "flagship": "agent-studio-open",
+      "contains_user_content": true,
+      "raw_payload_allowed": true,
+      "description": "Regression test cases."
+    },
+    {
+      "role": "agent_otel_spans",
+      "introduced_in": "1.2.0",
+      "flagship": "agent-studio-open",
+      "contains_user_content": true,
+      "raw_payload_allowed": false,
+      "description": "OpenTelemetry spans after the Agent Studio redaction pipeline removes secrets and payload bodies."
+    }
+  ]
+}

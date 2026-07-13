@@ -1,13 +1,21 @@
 import type {
   A2ATestResult,
+  ComparisonEvidence,
   ConnectionDraft,
   Manifest,
   PromptDefinition,
+  ReplayEvidence,
   ResourceDefinition,
   ToolDefinition,
+  TraceSession,
   Transport,
 } from "./types";
 import { isTauriRuntime } from "./platformBridge";
+import {
+  normalizeCompareResult,
+  normalizeReplayResult,
+  normalizeTraceImportResult,
+} from "./runtimeModels";
 
 type InvokeArgs = Record<string, unknown>;
 
@@ -55,27 +63,44 @@ export async function runtimeTraceImport(
   trace: string,
   format: string,
   store: string,
-): Promise<RuntimeCommandResult> {
-  return invokeRuntime<RuntimeCommandResult>("trace_store_write", {
+): Promise<TraceSession> {
+  const payload = await invokeRuntime<unknown>("trace_store_write", {
     request: { trace, format, store },
+  });
+  return normalizeTraceImportResult(payload, {
+    tracePath: trace,
+    format,
+    storePath: store,
   });
 }
 
 export async function runtimeReplayRun(
   replay: string,
   assertions: string,
-): Promise<RuntimeCommandResult> {
-  return invokeRuntime<RuntimeCommandResult>("replay_run", {
+): Promise<ReplayEvidence> {
+  const startedAt = performance.now();
+  const payload = await invokeRuntime<unknown>("replay_run", {
     request: { replay, assertions },
+  });
+  return normalizeReplayResult(payload, {
+    replayPath: replay,
+    assertionsPath: assertions,
+    durationMs: Math.max(0, Math.round(performance.now() - startedAt)),
   });
 }
 
 export async function runtimeCompareRun(
   baseline: string,
   candidate: string,
-): Promise<RuntimeCommandResult> {
-  return invokeRuntime<RuntimeCommandResult>("compare_run", {
+): Promise<ComparisonEvidence> {
+  const startedAt = performance.now();
+  const payload = await invokeRuntime<unknown>("compare_run", {
     request: { baseline, candidate },
+  });
+  return normalizeCompareResult(payload, {
+    baselinePath: baseline,
+    candidatePath: candidate,
+    durationMs: Math.max(0, Math.round(performance.now() - startedAt)),
   });
 }
 
@@ -106,14 +131,15 @@ export async function runtimeExportBundle(
   kind: string,
   input: string,
   out: string,
+  format?: string,
 ): Promise<RuntimeCommandResult> {
   return invokeRuntime<RuntimeCommandResult>("export_bundle", {
-    request: { kind, input, out },
+    request: { kind, input, out, format },
   });
 }
 
 export function runtimeUnavailableMessage(feature: string): string {
-  return `${feature} requires the Tauri desktop runtime. The hosted browser edition stays read-only and uses curated public samples.`;
+  return `${feature} requires the Tauri desktop runtime. The browser runtime cannot access local process, listener, or filesystem bridges.`;
 }
 
 async function invokeRuntime<T>(command: string, args: InvokeArgs): Promise<T> {

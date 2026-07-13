@@ -11,6 +11,18 @@
     "forceConsistentCasingInFileNames": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "baseUrl": ".",
+    "paths": {
+      "@auraone/platform-contracts": [
+        "packages/platform-contracts/src/index.ts"
+      ],
+      "@auraone/aura-ide-kit": [
+        "packages/aura-ide-kit/src/index.ts"
+      ],
+      "@auraone/proofline-oss": [
+        "packages/proofline-oss/src/index.ts"
+      ]
+    },
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,

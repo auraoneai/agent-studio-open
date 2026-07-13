@@ -96,12 +96,74 @@ function composeWebviewHtml(): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Agent Studio Compose</title>
   <style>
-    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #08100e; color: #edf7f2; }
-    main { padding: 16px; display: grid; gap: 12px; }
-    textarea, select, button { font: inherit; border-radius: 7px; border: 1px solid #2a3934; background: #111917; color: #edf7f2; padding: 8px; }
-    textarea { min-height: 220px; }
-    button { background: #58d6a6; color: #05100c; font-weight: 700; }
-    pre { background: #050807; border: 1px solid #2a3934; border-radius: 8px; padding: 12px; white-space: pre-wrap; }
+    :root {
+      color-scheme: light;
+      --pl-font-ui: var(
+        --pl-official-font-ui,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Arial,
+        sans-serif
+      );
+      --pl-font-mono: var(
+        --pl-official-font-mono,
+        ui-monospace,
+        "SFMono-Regular",
+        Consolas,
+        monospace
+      );
+      font-family: var(--pl-font-ui);
+      background: #f5f7fa;
+      color: #101820;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #f5f7fa; color: #101820; }
+    main { max-width: 760px; padding: 20px; display: grid; gap: 16px; }
+    h1 { margin: 0; font-size: 24px; line-height: 1.2; }
+    label { display: grid; gap: 6px; color: #3f4b59; font-size: 12px; font-weight: 600; }
+    textarea, select, button {
+      min-height: 36px;
+      padding: 8px 10px;
+      border: 1px solid #d5dde6;
+      border-radius: 6px;
+      background: #ffffff;
+      color: #101820;
+      font: inherit;
+    }
+    textarea {
+      min-height: 220px;
+      font-family: var(--pl-font-mono);
+      line-height: 1.5;
+    }
+    button {
+      justify-self: start;
+      border-color: #007582;
+      background: #007582;
+      color: #ffffff;
+      font-weight: 650;
+      cursor: pointer;
+    }
+    button:hover { border-color: #006a75; background: #006a75; }
+    textarea:focus-visible, select:focus-visible, button:focus-visible {
+      outline: 2px solid #0b6cff;
+      outline-offset: 2px;
+    }
+    pre {
+      padding: 12px;
+      overflow-wrap: anywhere;
+      border: 1px solid #e3e8ee;
+      border-radius: 6px;
+      background: #eef2f6;
+      color: #3f4b59;
+      white-space: pre-wrap;
+    }
+    @media (max-width: 600px) {
+      main { padding: 14px; }
+      textarea, select, button { min-height: 44px; }
+      button { width: 100%; }
+    }
   </style>
 </head>
 <body>

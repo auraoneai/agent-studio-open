@@ -3,17 +3,17 @@
   "product": "agent-studio-open",
   "platform_version": "0.3.0",
   "inherits": {
-    "tauri_template": "../../open-studio-platform/templates/tauri-app",
-    "csp": "../../open-studio-platform/configs/platform-contracts.json#/csp_connect_src",
+    "tauri_template": "../desktop/src-tauri",
+    "csp": "../platform/configs/platform-contracts.json#/csp_connect_src",
     "url_scheme": "auraone",
-    "updater": "../../open-studio-platform/configs/platform-contracts.json#/updater",
-    "telemetry_schema": "../../open-studio-platform/schemas/telemetry.schema.json",
-    "telemetry_events": "../../open-studio-platform/schemas/telemetry-events.json",
-    "crash_scrubber": "../../open-studio-platform/configs/sentry-scrub.json",
-    "keychain_api": "../../open-studio-platform/packages/platform-contracts/src/keychain.ts",
-    "intake_schema": "../../open-studio-platform/schemas/intake-packet.schema.json",
-    "intake_roles": "../../open-studio-platform/schemas/intake-roles.json",
-    "extension_hooks": "../../open-studio-platform/schemas/extension-hooks.schema.json"
+    "updater": "../platform/configs/platform-contracts.json#/updater",
+    "telemetry_schema": "../platform/schemas/telemetry.schema.json",
+    "telemetry_events": "../platform/schemas/telemetry-events.json",
+    "crash_scrubber": "../platform/configs/sentry-scrub.json",
+    "keychain_api": "../packages/platform-contracts/src/keychain.ts",
+    "intake_schema": "../platform/schemas/intake-packet.schema.json",
+    "intake_roles": "../platform/schemas/intake-roles.json",
+    "extension_hooks": "../platform/schemas/extension-hooks.schema.json"
   },
   "browser_edition_constraints": {
     "stdio_mcp": false,

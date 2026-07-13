@@ -46,7 +46,6 @@ fn existing_engine_paths() -> Vec<PathBuf> {
     let mut candidates = Vec::new();
     if let Some(repo_root) = source_repo_root() {
         append_repo_engine_paths(&mut candidates, &repo_root);
-        append_vendor_engine_paths(&mut candidates, &repo_root);
     }
     if let Some(resources) = bundled_resources_dir() {
         append_repo_engine_paths(&mut candidates, &resources);
@@ -55,8 +54,6 @@ fn existing_engine_paths() -> Vec<PathBuf> {
             &mut candidates,
             &resources.join("opensource").join("agent-studio-open"),
         );
-        append_vendor_engine_paths(&mut candidates, &resources);
-        append_vendor_engine_paths(&mut candidates, &resources.join("agent-studio-open"));
         append_tauri_resource_engine_paths(&mut candidates, &resources);
     }
     candidates
@@ -67,16 +64,6 @@ fn existing_engine_paths() -> Vec<PathBuf> {
 
 fn append_repo_engine_paths(paths: &mut Vec<PathBuf>, repo_root: &Path) {
     paths.push(repo_root.join("cli").join("src"));
-    if let Some(open_source_root) = repo_root.parent() {
-        paths.push(open_source_root.join("tool-call-replay").join("src"));
-        paths.push(open_source_root.join("agent-trace-card").join("src"));
-        paths.push(open_source_root.join("otel-eval-bridge").join("src"));
-        paths.push(open_source_root.join("mcp-risk-linter").join("src"));
-        paths.push(open_source_root.join("a2a-contract-test").join("src"));
-    }
-}
-
-fn append_vendor_engine_paths(paths: &mut Vec<PathBuf>, repo_root: &Path) {
     let vendor_root = repo_root.join("vendor");
     paths.push(vendor_root.join("tool-call-replay").join("src"));
     paths.push(vendor_root.join("agent-trace-card").join("src"));
@@ -87,12 +74,12 @@ fn append_vendor_engine_paths(paths: &mut Vec<PathBuf>, repo_root: &Path) {
 
 fn append_tauri_resource_engine_paths(paths: &mut Vec<PathBuf>, resources: &Path) {
     paths.push(resources.join("_up_").join("_up_").join("cli").join("src"));
-    let open_source_root = resources.join("_up_").join("_up_").join("_up_");
-    paths.push(open_source_root.join("tool-call-replay").join("src"));
-    paths.push(open_source_root.join("agent-trace-card").join("src"));
-    paths.push(open_source_root.join("otel-eval-bridge").join("src"));
-    paths.push(open_source_root.join("mcp-risk-linter").join("src"));
-    paths.push(open_source_root.join("a2a-contract-test").join("src"));
+    let vendor_root = resources.join("_up_").join("_up_").join("vendor");
+    paths.push(vendor_root.join("tool-call-replay").join("src"));
+    paths.push(vendor_root.join("agent-trace-card").join("src"));
+    paths.push(vendor_root.join("otel-eval-bridge").join("src"));
+    paths.push(vendor_root.join("mcp-risk-linter").join("src"));
+    paths.push(vendor_root.join("a2a-contract-test").join("src"));
 }
 
 fn source_repo_root() -> Option<PathBuf> {

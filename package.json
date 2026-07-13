@@ -1,34 +1,62 @@
 {
   "name": "@auraone/agent-studio-open",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Local-first IDE for debugging, replaying, and regression-testing MCP and A2A agents.",
+  "keywords": [
+    "ai-agents",
+    "mcp",
+    "a2a",
+    "opentelemetry",
+    "replay",
+    "regression-testing",
+    "local-first",
+    "tauri"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/auraoneai/agent-studio-open.git"
+  },
+  "homepage": "https://agentstudio.auraone.ai/",
+  "bugs": {
+    "url": "https://github.com/auraoneai/agent-studio-open/issues"
+  },
+  "license": "MIT",
   "type": "module",
   "scripts": {
+    "prebuild": "pnpm run platform:build",
     "dev": "vite --host 0.0.0.0",
     "build": "tsc --noEmit && vite build",
     "build:web": "AGENT_STUDIO_WEB_BASE=${AGENT_STUDIO_WEB_BASE:-/} AGENT_STUDIO_WEB_OUT_DIR=${AGENT_STUDIO_WEB_OUT_DIR:-dist} pnpm build",
     "build:demo": "VITE_AGENT_STUDIO_DEMO_MODE=true VITE_AGENT_STUDIO_BROWSER_URL=https://agentstudio.auraone.ai AGENT_STUDIO_WEB_BASE=/ AGENT_STUDIO_WEB_OUT_DIR=dist pnpm build",
+    "pretypecheck": "pnpm run platform:build",
     "typecheck": "tsc --noEmit && tsc -p vscode/tsconfig.json --noEmit",
     "type-check": "pnpm run typecheck",
-    "test": "vitest run --environment jsdom --config vite.config.ts",
+    "pretest": "pnpm run platform:build",
+    "test": "vitest run --environment jsdom",
     "test:a11y": "node scripts/audit_accessibility.mjs",
+    "capture:evidence": "node scripts/capture_screenshots.mjs",
+    "test:capture-evidence": "node scripts/capture_screenshots.mjs --verify",
     "test:screenshots": "node scripts/capture_screenshots.mjs",
-    "test:keyboard": "vitest run --environment jsdom --config vite.config.ts src/__tests__/app.test.tsx",
+    "test:keyboard": "vitest run --environment jsdom src/__tests__/app.test.tsx",
     "test:screen-reader-smoke": "node scripts/audit_accessibility.mjs",
     "test:perf": "node scripts/benchmark_ui_overhead.mjs",
     "test:packaged-startup": "node scripts/benchmark_packaged_startup.mjs",
     "test:trace-import-benchmark": "PYTHONPATH=cli/src python cli/scripts/benchmark_trace_store.py --rows 100000 --json",
-    "test:replay-benchmark": "PYTHONPATH=cli/src:../tool-call-replay/src python -m pytest -q cli/tests/test_agentstudio_cli.py -k replay_diff",
+    "test:replay-benchmark": "PYTHONPATH=cli/src:vendor/tool-call-replay/src python -m pytest -q cli/tests/test_agentstudio_cli.py -k replay_diff",
     "lint": "tsc --noEmit && tsc -p vscode/tsconfig.json --noEmit",
     "tauri": "tauri",
-    "tauri:build": "pnpm build && tauri build",
-    "vscode:build": "tsc -p vscode/tsconfig.json",
-    "desktop:check": "cargo test --manifest-path desktop/src-tauri/Cargo.toml"
+    "tauri:build": "pnpm build && tauri build --config desktop/src-tauri/tauri.conf.json",
+    "tauri:build:mac:signed": "tauri build --config desktop/src-tauri/tauri.conf.json --bundles dmg",
+    "desktop:check": "cargo test --manifest-path desktop/src-tauri/Cargo.toml",
+    "platform:build": "pnpm --dir packages/platform-contracts build && pnpm --dir packages/proofline-oss build && pnpm --dir packages/aura-ide-kit build"
   },
   "dependencies": {
+    "@auraone/aura-ide-kit": "file:packages/aura-ide-kit",
+    "@auraone/platform-contracts": "file:packages/platform-contracts",
     "@monaco-editor/react": "^4.7.0",
     "@tauri-apps/api": "2.11.0",
+    "@tauri-apps/plugin-updater": "2.10.1",
     "lucide-react": "^0.554.0",
     "react": "18.3.1",
     "react-dom": "18.3.1",
@@ -47,11 +75,15 @@
     "@vitejs/plugin-react": "^4.7.0",
     "axe-core": "^4.11.3",
     "fake-indexeddb": "^6.2.5",
-    "jsdom": "^25.0.1",
     "playwright": "1.56.0",
     "tailwindcss": "^4.2.4",
     "typescript": "^5.7.2",
     "vite": "^7.3.2",
-    "vitest": "^3.2.4"
-  }
+    "vitest": "^3.2.6"
+  },
+  "engines": {
+    "node": ">=20.19.5",
+    "pnpm": ">=10.18.0"
+  },
+  "packageManager": "pnpm@10.18.0"
 }

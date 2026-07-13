@@ -1,11 +1,13 @@
 import type {
   A2ATestResult,
   Capability,
+  ComparisonEvidence,
   ExportBundle,
   Manifest,
   ModelPreset,
   ModelVendor,
   ProviderKeyState,
+  ReplayEvidence,
   Span,
   Surface,
   TimelineEvent,
@@ -43,7 +45,7 @@ export const surfaces: Array<{ id: Surface; label: string; shortcut: string; gro
   { id: "traces", label: "Traces", shortcut: "3", group: "observe" },
   { id: "replay", label: "Replay", shortcut: "4", group: "observe" },
   { id: "a2a", label: "A2A", shortcut: "5", group: "observe" },
-  { id: "observe", label: "Observe", shortcut: "6", group: "observe" },
+  { id: "observe", label: "Data network", shortcut: "6", group: "observe" },
   { id: "compare", label: "Compare", shortcut: "7", group: "release" },
   { id: "ship", label: "Ship", shortcut: "8", group: "release" },
   { id: "settings", label: "Settings", shortcut: ",", group: "release" },
@@ -291,11 +293,88 @@ export const spans: Span[] = [
   { id: "span-4", name: "mcp.refund_order", kind: "tool", startMs: 1370, durationMs: 310, status: "error" },
 ];
 
-export const sampleTelemetryEvents = [
-  { id: "tel-1", timestamp: "09:38:02", name: "studio.boot", redacted: true, summary: "edition=desktop sandboxed=true" },
-  { id: "tel-2", timestamp: "09:41:11", name: "tool.invoke", redacted: true, summary: "tool=refund_order outcome=ok" },
-  { id: "tel-3", timestamp: "09:42:24", name: "regression.export", redacted: true, summary: "format=github-action sessions=1" },
-];
+export const demoReplayResult: ReplayEvidence = {
+  runId: "replay-2026-05-12-094118",
+  status: "review",
+  baseline: "trace-refund",
+  candidate: "support-crm-mcp@0.8.4",
+  durationMs: 1842,
+  assertions: { passed: 7, review: 1, failed: 0 },
+  changes: [
+    {
+      turn: 3,
+      kind: "tool-input",
+      label: "lookup_order arguments",
+      baseline: '{"order_id":"ORD-1842","include_events":true}',
+      candidate: '{"include_events":true,"order_id":"ORD-1842"}',
+      verdict: "equivalent",
+    },
+    {
+      turn: 5,
+      kind: "tool-output",
+      label: "refund_order response",
+      baseline: '{"status":"approved","amount_cents":1299}',
+      candidate: '{"amount_cents":1299,"status":"approved","retry_count":1}',
+      verdict: "review",
+    },
+    {
+      turn: 6,
+      kind: "model-output",
+      label: "Final response",
+      baseline: "Refund confirmed. Notification sent.",
+      candidate: "Refund confirmed and the customer notification was sent.",
+      verdict: "equivalent",
+    },
+  ],
+};
+
+export const demoCompareResult: ComparisonEvidence = {
+  runId: "compare-2026-05-12-094203",
+  baseline: "trace-refund",
+  durationMs: 3264,
+  columns: ["claude-opus-4-7", "gpt-5.5"],
+  rows: [
+    {
+      label: "Tool sequence",
+      values: [
+        { verdict: "pass", detail: "2 calls · exact" },
+        { verdict: "pass", detail: "2 calls · exact" },
+      ],
+    },
+    {
+      label: "Arguments",
+      values: [
+        { verdict: "pass", detail: "schema exact" },
+        { verdict: "review", detail: "key order only" },
+      ],
+    },
+    {
+      label: "Policy decision",
+      values: [
+        { verdict: "pass", detail: "refund approved" },
+        { verdict: "pass", detail: "refund approved" },
+      ],
+    },
+    {
+      label: "Retry behavior",
+      values: [
+        { verdict: "pass", detail: "0 retries" },
+        { verdict: "review", detail: "1 retry" },
+      ],
+    },
+    {
+      label: "Final response",
+      values: [
+        { verdict: "pass", detail: "grounded" },
+        { verdict: "pass", detail: "paraphrase" },
+      ],
+    },
+  ],
+  summary: [
+    { model: "claude-opus-4-7", passed: 5, review: 0, failed: 0, latencyMs: 1796, costUsd: 0.0073 },
+    { model: "gpt-5.5", passed: 3, review: 2, failed: 0, latencyMs: 2342, costUsd: 0.0107 },
+  ],
+};
 
 export function validateJson(input: string): { ok: true; value: unknown } | { ok: false; message: string } {
   try {
@@ -329,54 +408,199 @@ export function summarizeSession(session: TraceSession): { latencyMs: number; co
 }
 
 export function buildExportBundle(sessions: TraceSession[]): ExportBundle {
-  const cases = sessions.map((session) => `          tool-call-replay run regressions/${session.id}.json`).join("\n");
+  const selected = sessions[0];
+  const tools =
+    selected?.events
+      .filter((event) => event.kind === "tool-call")
+      .map((event) => event.title) ?? [];
+  const finalAnswer =
+    [...(selected?.events ?? [])]
+      .reverse()
+      .find((event) => event.kind === "model")?.body ?? "";
+  const replayEvents: Array<{
+    type: string;
+    tool_name: string;
+    arguments?: unknown;
+    output?: unknown;
+  }> =
+    selected?.events.flatMap<{
+      type: string;
+      tool_name: string;
+      arguments?: unknown;
+      output?: unknown;
+    }>((event) => {
+      if (event.kind === "tool-call") {
+        return [
+          {
+            type: "tool_call",
+            tool_name: event.title,
+            arguments: parseExportValue(event.body),
+          },
+        ];
+      }
+      if (event.kind === "tool-result") {
+        return [
+          {
+            type: "tool_result",
+            tool_name: event.title.replace(/\s+result$/i, ""),
+            output: parseExportValue(event.body),
+          },
+        ];
+      }
+      return [];
+    }) ?? [];
+  const replay = {
+    schema_version: "tool-call-replay/v1",
+    trace_id: selected?.id ?? "trace-empty",
+    goal: selected?.name ?? "No trace selected",
+    events: replayEvents,
+    final_answer: finalAnswer,
+  };
+  const traceCard = {
+    schema_version: "agent-trace-card/v1",
+    trace_id: selected?.id ?? "trace-empty",
+    goal: selected?.name ?? "No trace selected",
+    outcome: selected?.status === "failed" ? "failed" : "passed",
+    tools: [...new Set(tools)].sort(),
+    retry_count: tools.reduce(
+      (count, tool, index) =>
+        count + (tools.slice(0, index).includes(tool) ? 1 : 0),
+      0,
+    ),
+    data_touched: exportDataTouched(selected),
+    policy_checks: [],
+    failure_modes:
+      selected?.events.some((event) => event.kind === "error")
+        ? ["tool_error"]
+        : [],
+    human_intervention: "none recorded",
+    regression_status: "covered",
+    links: {},
+  };
+  const junitCases = sessions
+    .map((session) => {
+      const name = escapeExportXml(session.name);
+      if (session.status === "passed") {
+        return `<testcase name="${name}" />`;
+      }
+      return `<testcase name="${name}"><failure>${escapeExportXml(
+        session.status === "failed"
+          ? "trace failed"
+          : "trace requires review",
+      )}</failure></testcase>`;
+    })
+    .join("");
   return {
-    workflow: [
-      "name: Agent Studio Regression",
-      "on: [pull_request, push]",
-      "jobs:",
-      "  replay:",
-      "    runs-on: ubuntu-latest",
-      "    steps:",
-      "      - uses: actions/checkout@v4",
-      "      - run: pip install tool-call-replay",
-      "      - name: Run agent regressions",
-      "        run: |",
-      cases,
-    ].join("\n"),
-    junit: `<?xml version="1.0" encoding="UTF-8"?><testsuite name="agent-studio" tests="${sessions.length}" failures="1"><testcase name="Late delivery refund"/><testcase name="Deletion guardrail blocked"><failure message="sandbox rejected"/></testcase></testsuite>`,
+    workflow: `name: Agent regression
+on: [pull_request]
+jobs:
+  agent-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install tool-call-replay
+      - run: |
+          for f in regressions/*.json; do
+            tool-call-replay run "$f" --assert "\${f%.json}.assertions.yaml" || exit 1
+          done
+`,
+    junit: `<testsuite name="agentstudio" tests="${sessions.length}" failures="${sessions.filter((session) => session.status !== "passed").length}">${junitCases}</testsuite>\n`,
     prComment: [
-      "## Agent Studio regression report",
+      "<!-- agentstudio-trace-card -->",
+      "## Agent Studio Trace",
       "",
-      "| Session | Model | Status |",
-      "|---|---|---|",
-      ...sessions.map((session) => `| ${session.name} | ${session.model} | ${session.status} |`),
+      `- Session: \`${selected?.id ?? "trace-empty"}\``,
+      `- Tool calls: ${tools.length}`,
+      "",
+      ...tools.map(
+        (tool, index) => `${index + 1}. \`${tool}\` status: \`ok\``,
+      ),
+      "",
     ].join("\n"),
     intakeManifest: JSON.stringify(
       {
-        format: "auraonepkg.agent-studio.v1",
-        generatedBy: "Agent Studio Open",
-        redaction: "trace payload preview required before upload",
-        sessions: sessions.map(({ id, name, model, status }) => ({ id, name, model, status })),
+        schema: "agentstudio.export-evidence.v1",
+        archive: "agentstudio-intake.zip",
+        entries: [
+          "trace.ast",
+          `regressions/${selected?.id ?? "trace-empty"}.json`,
+          `regressions/${selected?.id ?? "trace-empty"}.assertions.yaml`,
+          "README.md",
+          "agentstudio-export-manifest.json",
+        ],
       },
       null,
       2,
     ),
-    traceCard: JSON.stringify(
+    traceCard: `${JSON.stringify(traceCard, null, 2)}\n`,
+    sourceTrace: `${JSON.stringify(
       {
-        schema: "https://auraone.ai/schemas/agent-trace-card.v1.json",
-        generatedBy: "Agent Studio Open",
-        trace: {
-          id: sessions[0]?.id ?? "trace-empty",
-          name: sessions[0]?.name ?? "No trace selected",
-          model: sessions[0]?.model ?? "unknown",
-          status: sessions[0]?.status ?? "pending",
-          summary: sessions[0] ? summarizeSession(sessions[0]) : { latencyMs: 0, costUsd: 0, toolCalls: 0 },
-        },
-        artifacts: ["workflow", "junit", "pr-comment", "auraone-intake"],
+        schema: "agentstudio.trace-export.v1",
+        trace: selected ?? null,
       },
       null,
       2,
-    ),
+    )}\n`,
+    regressionReplay: `${JSON.stringify(replay, null, 2)}\n`,
+    regressionAssertions: [
+      "tool_order:",
+      ...(tools.length > 0
+        ? tools.map((tool) => `  - ${tool}`)
+        : ["  []"]),
+      `final_answer_contains: ${JSON.stringify(
+        finalAnswer.split(/\s+/).slice(0, 2).join(" ") || "completed",
+      )}`,
+      "",
+    ].join("\n"),
+    regressionReadme:
+      "# Agent Studio regression export\n\nRun by GitHub Actions with `tool-call-replay`.\n",
+    intakeReadme:
+      "Agent Studio Open intake packet. User-created local export.\n",
   };
+}
+
+function parseExportValue(value: string): unknown {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+}
+
+function escapeExportXml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#x27;");
+}
+
+function exportDataTouched(session: TraceSession | undefined): string[] {
+  const values = new Set<string>();
+  for (const event of session?.events ?? []) {
+    if (event.kind !== "tool-call") {
+      continue;
+    }
+    const payload = parseExportValue(event.body);
+    if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+      continue;
+    }
+    const record = payload as Record<string, unknown>;
+    for (const key of [
+      "order_id",
+      "user_id",
+      "account_id",
+      "ticket_id",
+      "file_path",
+    ]) {
+      if (key in record) {
+        values.add(`${key}:${String(record[key])}`);
+      }
+    }
+  }
+  return [...values].sort();
 }
