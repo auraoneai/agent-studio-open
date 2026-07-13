@@ -2,6 +2,16 @@
 
 All notable changes to Agent Studio Open are documented in this file.
 
+## Unreleased
+
+### Changed
+
+- Load licensed AuraOne typography in the hosted browser through a same-origin
+  Vercel proxy without adding font binaries to the public repository or
+  desktop bundle.
+- Use the focused replay capture and point desktop/npm guidance at the
+  dedicated public repository.
+
 ## 0.2.0 - 2026-07-12
 
 ### Changed

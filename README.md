@@ -11,7 +11,7 @@ comparison, risk review, and CI artifact export.
 
 ## Visual Workflow
 
-![Agent Studio Open deterministic replay workspace showing the selected trace, tool sequence, replay evidence, and regression result](https://www.auraone.ai/open/agent-studio-open/screenshots/replay-run.webp)
+![Agent Studio Open deterministic replay workspace with replay controls, trace context, assertions, and baseline-versus-candidate evidence](https://www.auraone.ai/open/agent-studio-open/screenshots/replay-run.webp)
 
 The selected proof image matches the single product view used by the public
 website route. Capture provenance is recorded in the
@@ -65,7 +65,7 @@ The JavaScript MCP manifest validator and release metadata companion is
 published on npm:
 
 ```bash
-npm install @auraone/agent-studio@0.2.0
+npm install @auraone/agent-studio@0.2.1
 npx @auraone/agent-studio validate ./manifest.json
 ```
 
@@ -142,12 +142,12 @@ by default. Release builds can set `VITE_AGENT_STUDIO_DESKTOP_RELEASE_URL` to a
 signed distribution landing page without changing application source.
 
 Private licensed font binaries are excluded from public source, npm metadata,
-VSIX/CLI packages, and desktop release artifacts. An authorized branded
-deployment may provide licensed typography only through a host-owned stylesheet
-on an approved same-origin path; if it is absent or blocked, the system stacks
-remain the supported fallback. Capture tooling may use an isolated temporary
-loopback font boundary, but it must never copy those binaries into a public
-package.
+VSIX/CLI packages, and desktop release artifacts. The canonical hosted browser
+loads licensed AuraOne typography through `/fonts/proofline-brand.css`, a
+same-origin proxy to the marketing-site font boundary. If it is absent or
+blocked, the system stacks remain the supported fallback. Capture tooling may
+use an isolated temporary loopback font boundary, but it must never copy those
+binaries into a public package.
 
 ## Proof And Verification
 
