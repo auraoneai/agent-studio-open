@@ -4,6 +4,12 @@
   "framework": "vite",
   "installCommand": "cd ../.. && pnpm install --frozen-lockfile",
   "outputDirectory": "dist",
+  "rewrites": [
+    {
+      "source": "/fonts/:path*",
+      "destination": "https://www.auraone.ai/fonts/:path*"
+    }
+  ],
   "redirects": [
     {
       "source": "/web",
