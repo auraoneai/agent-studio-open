@@ -179,7 +179,7 @@ Status verified on **July 13, 2026**:
 - `Agent.Studio.Open_0.2.0_aarch64.dmg` is signed, notarized, stapled,
   Gatekeeper accepted, checksum verified, and offline-install tested.
 - `auraone-agent-studio-open 0.2.0` is public on PyPI for CLI workflows.
-- `@auraone/agent-studio 0.2.0` is public on npm for MCP manifest validation
+- `@auraone/agent-studio 0.2.1` is public on npm for MCP manifest validation
   and release metadata.
 - The hosted browser edition is publicly reachable at
   `agentstudio.auraone.ai`.
