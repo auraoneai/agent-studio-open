@@ -15,7 +15,7 @@ describe("hosted browser boundary", () => {
     expect(html).toContain('href="/fonts/proofline-brand.css"');
     expect(vercel.rewrites[0]).toEqual({
       source: "/fonts/:path*",
-      destination: "https://www.auraone.ai/fonts/:path*",
+      destination: "https://auraone.ai/fonts/:path*",
     });
   });
 });
