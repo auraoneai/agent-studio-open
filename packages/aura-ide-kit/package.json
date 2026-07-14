@@ -1,6 +1,6 @@
 {
   "name": "@auraone/aura-ide-kit",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Accessible IDE components and SSR posture contracts for AuraOne Open Studio apps.",
   "keywords": [
     "auraone",
@@ -54,7 +54,7 @@
     "react-dom": "18.3.1"
   },
   "dependencies": {
-    "@auraone/proofline-oss": "workspace:*",
+    "@auraone/proofline-oss": "^0.1.1",
     "@monaco-editor/react": "4.7.0",
     "lucide-react": "0.554.0"
   },

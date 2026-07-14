@@ -14,12 +14,11 @@ by a package scanner.
 
 ## Install
 
-Status verified on **July 13, 2026**: version `0.1.0` is published on the public
-npm registry. Version `0.1.1` is the tested source candidate and remains
-unpublished until npm write authorization is restored.
+Status verified on **July 14, 2026**: version `0.1.1` is published on the
+public npm registry.
 
 ```bash
-npm install @auraone/proofline-oss@0.1.0
+npm install @auraone/proofline-oss@0.1.1
 ```
 
 For workspace development from the `open-studio-platform` root:
@@ -108,7 +107,6 @@ assets.
 
 ## Release Truth
 
-The `0.1.1` source candidate passes typecheck, component tests,
-asset-boundary verification, and packed-file inspection. Do not advertise it
-as public until the npm registry accepts the exact tarball and exposes its
-integrity record.
+The public `0.1.1` package passes typecheck, component tests, asset-boundary
+verification, packed-file inspection, registry readback, and a clean external
+install.

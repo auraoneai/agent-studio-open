@@ -12,13 +12,17 @@ without rebuilding complex interaction and accessibility behavior per product.
 graduate into Proofline only after multi-product use proves a stable,
 product-neutral public contract.
 
-## Install From Source
+## Install
 
-Status verified on **July 13, 2026**: version `0.2.0` passes its package gates
-but is not yet published on the public npm registry. Use `workspace:*` from the
-canonical source checkout until registry authorization is restored.
+Status verified on **July 14, 2026**: version `0.2.1` is published on the
+public npm registry. It replaces `0.2.0`, whose published manifest retained a
+workspace-only dependency and cannot be installed outside the monorepo.
 
-From the `open-studio-platform` root:
+```bash
+npm install @auraone/aura-ide-kit@0.2.1
+```
+
+For workspace development from the `open-studio-platform` root:
 
 ```bash
 corepack enable
@@ -134,7 +138,7 @@ tarball surface is limited by the package `files` allowlist.
 
 ## Release Truth
 
-The `0.2.0` source candidate passes typecheck, component tests, accessibility
-checks, SSR-posture verification, and packed-file inspection. Do not document
-an npm install command until the registry exposes the exact version and
-integrity record.
+The public `0.2.1` package passes typecheck, component tests, accessibility
+checks, SSR-posture verification, packed-file inspection, registry readback,
+and a clean external install. Its Proofline dependency resolves to the public
+`@auraone/proofline-oss` `0.1.x` release line.
