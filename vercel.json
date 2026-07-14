@@ -7,7 +7,7 @@
   "rewrites": [
     {
       "source": "/fonts/:path*",
-      "destination": "https://www.auraone.ai/fonts/:path*"
+      "destination": "https://auraone.ai/fonts/:path*"
     }
   ],
   "redirects": [
