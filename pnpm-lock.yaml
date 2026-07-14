@@ -10,7 +10,7 @@ importers:
     dependencies:
       '@auraone/aura-ide-kit':
         specifier: file:packages/aura-ide-kit
-        version: file:packages/aura-ide-kit(monaco-editor@0.55.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: link:packages/aura-ide-kit
       '@auraone/platform-contracts':
         specifier: file:packages/platform-contracts
         version: link:packages/platform-contracts
@@ -91,8 +91,8 @@ importers:
   packages/aura-ide-kit:
     dependencies:
       '@auraone/proofline-oss':
-        specifier: workspace:*
-        version: link:../proofline-oss
+        specifier: ^0.1.1
+        version: 0.1.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@monaco-editor/react':
         specifier: 4.7.0
         version: 4.7.0(monaco-editor@0.55.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -201,12 +201,12 @@ packages:
   '@asamuzakjp/css-color@3.2.0':
     resolution: {integrity: sha512-K1A6z8tS3XsmCMM86xoWdn7Fkdn9m6RSVtocUrJYIwZnFVkng/PvkEoWtOWmP+Scc6saYWHWZYbndEEXxl24jw==}
 
-  '@auraone/aura-ide-kit@file:packages/aura-ide-kit':
-    resolution: {directory: packages/aura-ide-kit, type: directory}
+  '@auraone/proofline-oss@0.1.1':
+    resolution: {integrity: sha512-GRChvg3n/7psEVazeDjaGd2QCmTWRXFuGM9EDH9lJdm6ABYqzdd7qgeE+HNqi1E7Attf9tPcznr2O3+Z2Alvgw==}
     engines: {node: '>=20.19.5'}
     peerDependencies:
-      react: 18.3.1
-      react-dom: 18.3.1
+      react: '>=18.3.1'
+      react-dom: '>=18.3.1'
 
   '@babel/code-frame@7.29.7':
     resolution: {integrity: sha512-Aup7aUOfpbAUg2ROOJN6Iw5f9DMBlzu0mIkm/malLQFN/YQgO48wCj0Kxa3sEHJvPVFg7siR+qRInwXd2qhQKw==}
@@ -2201,15 +2201,11 @@ snapshots:
       '@csstools/css-tokenizer': 3.0.4
       lru-cache: 10.4.3
 
-  '@auraone/aura-ide-kit@file:packages/aura-ide-kit(monaco-editor@0.55.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
+  '@auraone/proofline-oss@0.1.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
-      '@auraone/proofline-oss': link:packages/proofline-oss
-      '@monaco-editor/react': 4.7.0(monaco-editor@0.55.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       lucide-react: 0.554.0(react@18.3.1)
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
-    transitivePeerDependencies:
-      - monaco-editor
 
   '@babel/code-frame@7.29.7':
     dependencies:
