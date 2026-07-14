@@ -4,7 +4,11 @@ All notable changes to Agent Studio Open are documented in this file.
 
 ## Unreleased
 
-No changes yet.
+### Fixed
+
+- Corrected the public npm install and release-truth guidance to identify
+  `@auraone/agent-studio@0.2.1` as live and `0.2.2` as an unpublished
+  candidate pending registry write authorization.
 
 ## 0.2.1 - 2026-07-13
 

@@ -12,11 +12,11 @@ without rebuilding complex interaction and accessibility behavior per product.
 graduate into Proofline only after multi-product use proves a stable,
 product-neutral public contract.
 
-## Install From The Current Source
+## Install From Source
 
-Status verified on **July 13, 2026**: version `0.2.0` is a workspace candidate,
-and `@auraone/aura-ide-kit` is not published on the public npm registry.
-Consume it through `workspace:*` or the sibling Studio `file:` path.
+Status verified on **July 13, 2026**: version `0.2.0` passes its package gates
+but is not yet published on the public npm registry. Use `workspace:*` from the
+canonical source checkout until registry authorization is restored.
 
 From the `open-studio-platform` root:
 
@@ -132,10 +132,9 @@ Tests cover component contracts, command registration, focus and keyboard
 behavior, accessible semantics, and the SSR posture inventory. The built
 tarball surface is limited by the package `files` allowlist.
 
-## Release Truth And Next Action
+## Release Truth
 
-The `package.json` repository metadata points at the intended canonical source
-home, not a currently available npm release. Integrate through this workspace
-today. Before a public install command is documented, maintainers must verify
-the packed files, publish with provenance, and confirm the exact registry URL
-and version.
+The `0.2.0` source candidate passes typecheck, component tests, accessibility
+checks, SSR-posture verification, and packed-file inspection. Do not document
+an npm install command until the registry exposes the exact version and
+integrity record.

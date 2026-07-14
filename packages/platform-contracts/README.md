@@ -12,11 +12,11 @@ keychain, crash, event-log, or extension boundaries.
 manifest shapes stay consistent across Rubric, Agent, and Robotics while each
 consumer retains control of when and how a network or native capability runs.
 
-## Install From The Current Source
+## Install From Source
 
-Status verified on **July 13, 2026**: version `0.3.0` is a workspace candidate,
-and `@auraone/platform-contracts` is not published on the public npm registry.
-Use `workspace:*` or a local `file:` dependency.
+Status verified on **July 13, 2026**: version `0.3.0` passes its package gates
+but is not yet published on the public npm registry. Use `workspace:*` from the
+canonical source checkout until registry authorization is restored.
 
 From the `open-studio-platform` root:
 
@@ -92,10 +92,8 @@ node --test tests/platform-contracts.test.mjs
 The root platform suite also exercises flagship integration, intake roles,
 schema/privacy policy, security checklists, and release-flow contracts.
 
-## Release Truth And Next Action
+## Release Truth
 
-The repository fields identify the intended canonical package home, but they
-are not registry evidence. Use the workspace build now. A public release
-requires a reviewed `dist/` tarball, passing contract tests, npm provenance, and
-a live registry page for the exact version before any `pnpm add` instruction is
-supported.
+The `0.3.0` source candidate passes typecheck, contract tests, and emitted-file
+inspection. Do not document an npm install command until the registry exposes
+the exact version and integrity record.
