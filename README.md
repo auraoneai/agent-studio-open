@@ -65,11 +65,14 @@ The JavaScript MCP manifest validator and release metadata companion is
 published on npm:
 
 ```bash
-npm install @auraone/agent-studio@0.2.2
+npm install @auraone/agent-studio@0.2.1
 npx @auraone/agent-studio validate ./manifest.json
 ```
 
 The npm package does not bundle the visual application or Python runtime.
+Version `0.2.2` is a tested follow-up candidate, not a public release. Continue
+to pin `0.2.1` until npm serves the newer version and its registry tarball has
+been verified.
 Homebrew is not a verified `0.2.0` distribution channel.
 
 ### Source Checkout
@@ -179,8 +182,9 @@ Status verified on **July 13, 2026**:
 - `Agent.Studio.Open_0.2.0_aarch64.dmg` is signed, notarized, stapled,
   Gatekeeper accepted, checksum verified, and offline-install tested.
 - `auraone-agent-studio-open 0.2.1` is public on PyPI for CLI workflows.
-- `@auraone/agent-studio 0.2.2` is public on npm for MCP manifest validation
-  and release metadata.
+- `@auraone/agent-studio 0.2.1` is public on npm for MCP manifest validation
+  and release metadata. The tested `0.2.2` candidate remains unpublished
+  pending registry write authorization.
 - The hosted browser edition is publicly reachable at
   `agentstudio.auraone.ai`.
 - The npm package does not contain the root visual app. Homebrew, Windows,

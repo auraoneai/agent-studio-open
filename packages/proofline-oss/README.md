@@ -12,13 +12,17 @@ governance tools that need dense IDE ergonomics and explicit evidence states.
 alone; charts require a table alternative; and public-asset policy is enforced
 by a package scanner.
 
-## Install From The Current Source
+## Install
 
-Status verified on **July 13, 2026**: version `0.1.0` is a workspace candidate,
-and `@auraone/proofline-oss` is not published on the public npm registry. Do not
-use `pnpm add @auraone/proofline-oss` as a supported install path yet.
+Status verified on **July 13, 2026**: version `0.1.0` is published on the public
+npm registry. Version `0.1.1` is the tested source candidate and remains
+unpublished until npm write authorization is restored.
 
-From the `open-studio-platform` root:
+```bash
+npm install @auraone/proofline-oss@0.1.0
+```
+
+For workspace development from the `open-studio-platform` root:
 
 ```bash
 corepack enable
@@ -102,10 +106,9 @@ status labeling, and chart alternatives. `verify:public-assets` rejects private
 font names and binaries, remote font imports, and other disallowed public
 assets.
 
-## Release Truth And Next Action
+## Release Truth
 
-The repository, homepage, and issue fields in `package.json` identify the
-intended canonical package home; they are not proof of a public release. Use
-the workspace build today. The next publishable step is a clean source commit,
-a reviewed tarball allowlist, passing proof gates, npm provenance, and a live
-registry URL for the exact version.
+The `0.1.1` source candidate passes typecheck, component tests,
+asset-boundary verification, and packed-file inspection. Do not advertise it
+as public until the npm registry accepts the exact tarball and exposes its
+integrity record.
