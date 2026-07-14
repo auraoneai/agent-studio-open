@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "auraone-agent-studio-open"
-version = "0.2.0"
+version = "0.2.1"
 description = "Headless Agent Studio Open protocol, trace-store, sidecar, and export CLI."
 readme = "README.md"
 requires-python = ">=3.11"

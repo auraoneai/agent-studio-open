@@ -67,13 +67,13 @@ under `tests/fixtures/`. Focused tests cover CLI exit behavior, JSON output,
 trace import and search, deterministic replay, comparison, GitHub and JUnit
 exports, provider dry runs, and sidecar integration.
 
-Run the local proof suite before adopting a candidate build:
+Run the local proof suite before adopting a build:
 
 ```bash
 python -m pytest -p no:cacheprovider -q
 rm -rf build dist src/*.egg-info
 python -m build
-python scripts/release_preflight.py --expected-version 0.2.0 --dist dist
+python scripts/release_preflight.py --expected-version 0.2.1 --dist dist
 ```
 
 ## Runtime, Data, And Network Boundary
@@ -90,18 +90,18 @@ python scripts/release_preflight.py --expected-version 0.2.0 --dist dist
 
 ## Release Status
 
-The current public PyPI package is `auraone-agent-studio-open` `0.2.0`.
+The current public PyPI package is `auraone-agent-studio-open` `0.2.1`.
 The wheel and source distribution were published from the coordinated AuraOne
 Open release and independently verified against the registry hashes.
 
 Install the current public package with:
 
 ```bash
-python -m pip install "auraone-agent-studio-open==0.2.0"
+python -m pip install "auraone-agent-studio-open==0.2.1"
 ```
 
 Use the editable source command above when evaluating changes newer than the
-published `0.2.0` package.
+published `0.2.1` package.
 
 ## Limitations
 
@@ -114,6 +114,6 @@ live provider will return the same model output.
 ## Next Action
 
 Start with `agentstudio --json self-test`, import the bundled synthetic trace,
-and inspect one JSON or JUnit export. Before promoting `0.2.0`, repeat the clean
-wheel install and release preflight from the exact tagged source and attach the
-result to the coordinated AuraOne Open release record.
+and inspect one JSON or JUnit export. Before promoting a later version, repeat
+the clean wheel install and release preflight from the exact tagged source and
+attach the result to the coordinated AuraOne Open release record.

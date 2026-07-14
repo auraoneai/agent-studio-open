@@ -273,7 +273,7 @@ def discover_manifest(transport: Transport, transport_name: str) -> MCPManifest:
         {
             "protocolVersion": MCP_PROTOCOL_VERSION,
             "capabilities": {},
-            "clientInfo": {"name": "agentstudio", "version": "0.2.0"},
+            "clientInfo": {"name": "agentstudio", "version": "0.2.1"},
         },
     )
     tools = _items(transport.request("tools/list"), "tools")
