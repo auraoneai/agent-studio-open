@@ -222,7 +222,7 @@ def test_replay_diff_and_exports(tmp_path, capsys):
     assert json.loads(card_out.read_text(encoding="utf-8"))["schema_version"] == "agent-trace-card/v1"
     assert card_evidence["artifact"]["filename"] == "trace-card.json"
     assert card_evidence["artifact"]["format"] == "agent-trace-card-json"
-    assert card_evidence["sourceBuild"]["version"] == "0.2.0"
+    assert card_evidence["sourceBuild"]["version"] == "0.2.1"
     assert len(card_evidence["sourceBuild"]["sourceDigest"]) == 64
 
 

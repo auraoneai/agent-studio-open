@@ -57,7 +57,7 @@ shasum -a 256 Agent.Studio.Open_0.2.0_aarch64.dmg
 The companion CLI is published independently on PyPI:
 
 ```bash
-python -m pip install auraone-agent-studio-open==0.2.0
+python -m pip install auraone-agent-studio-open==0.2.1
 agentstudio --help
 ```
 
@@ -65,7 +65,7 @@ The JavaScript MCP manifest validator and release metadata companion is
 published on npm:
 
 ```bash
-npm install @auraone/agent-studio@0.2.1
+npm install @auraone/agent-studio@0.2.2
 npx @auraone/agent-studio validate ./manifest.json
 ```
 
@@ -178,8 +178,8 @@ Status verified on **July 13, 2026**:
 - GitHub Release `agent-studio-open-v0.2.0` is public.
 - `Agent.Studio.Open_0.2.0_aarch64.dmg` is signed, notarized, stapled,
   Gatekeeper accepted, checksum verified, and offline-install tested.
-- `auraone-agent-studio-open 0.2.0` is public on PyPI for CLI workflows.
-- `@auraone/agent-studio 0.2.1` is public on npm for MCP manifest validation
+- `auraone-agent-studio-open 0.2.1` is public on PyPI for CLI workflows.
+- `@auraone/agent-studio 0.2.2` is public on npm for MCP manifest validation
   and release metadata.
 - The hosted browser edition is publicly reachable at
   `agentstudio.auraone.ai`.

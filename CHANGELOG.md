@@ -4,6 +4,10 @@ All notable changes to Agent Studio Open are documented in this file.
 
 ## Unreleased
 
+No changes yet.
+
+## 0.2.1 - 2026-07-13
+
 ### Changed
 
 - Load licensed AuraOne typography in the hosted browser through a same-origin
@@ -11,6 +15,9 @@ All notable changes to Agent Studio Open are documented in this file.
   desktop bundle.
 - Use the focused replay capture and point desktop/npm guidance at the
   dedicated public repository.
+- Correct the PyPI long description and release guidance so the package page
+  identifies `0.2.1` as published rather than describing `0.2.0` as an
+  unreleased candidate.
 
 ## 0.2.0 - 2026-07-12
 
