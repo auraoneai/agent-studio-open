@@ -2,8 +2,6 @@ import type { Capability, Transport } from "../../app/src/types";
 
 export const browserAllowedTransports: Transport[] = ["sse", "http", "websocket"];
 
-export const browserBlockedCapabilities = ["stdio", "otlp-receiver", "keychain"] as const;
-
 const DB_NAME = "agent-studio-open";
 const DB_VERSION = 1;
 const TRACE_STORE = "traceSessions";
@@ -28,13 +26,6 @@ export interface BrowserProviderKeyRecord {
 
 export function canBrowserUseTransport(transport: Transport): boolean {
   return browserAllowedTransports.includes(transport);
-}
-
-export function describeBrowserConstraint(capability: Capability): string {
-  if (capability.browser) {
-    return `${capability.label} is available in the browser edition.`;
-  }
-  return capability.reason ?? `${capability.label} is desktop-only.`;
 }
 
 export function guardBrowserConnection(transport: Transport): { ok: true } | { ok: false; message: string } {

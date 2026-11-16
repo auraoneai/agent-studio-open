@@ -22,8 +22,6 @@ export function createInitialStudioState(): StudioState {
   };
 }
 
-export const initialStudioState = createInitialStudioState();
-
 interface StudioStore {
   state: StudioState;
   setState: (updater: StudioState | ((current: StudioState) => StudioState)) => void;
