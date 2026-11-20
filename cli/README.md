@@ -1,5 +1,12 @@
 # agentstudio CLI
 
+MCP and A2A agent trace debugger and replay, as a headless CLI for
+[Agent Studio Open](https://auraone.ai/open/agent-studio-open).
+
+[![Try it in the browser](https://img.shields.io/badge/Try%20it%20in%20the%20browser-agentstudio.auraone.ai-2563eb)](https://agentstudio.auraone.ai)
+[![PyPI](https://img.shields.io/pypi/v/auraone-agent-studio-open)](https://pypi.org/project/auraone-agent-studio-open/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/auraoneai/agent-studio-open/blob/main/LICENSE)
+
 `agentstudio` is the headless Agent Studio Open runtime for protocol smoke
 tests, local trace storage, deterministic replay exports, and Python sidecar
 integration. It is intentionally local-first: traces are written to SQLite
@@ -117,3 +124,16 @@ Start with `agentstudio --json self-test`, import the bundled synthetic trace,
 and inspect one JSON or JUnit export. Before promoting a later version, repeat
 the clean wheel install and release preflight from the exact tagged source and
 attach the result to the coordinated AuraOne Open release record.
+
+## Part of the AuraOne Agent Reliability Workflow
+
+- [tool-call-replay](https://auraone.ai/open/tool-call-replay): turn a recorded
+  agent failure into a pytest regression.
+- [Agent Studio Open](https://auraone.ai/open/agent-studio-open): debug, replay,
+  and compare MCP and A2A agent traces.
+- [mcp-risk-linter](https://auraone.ai/open/mcp-risk-linter): offline MCP
+  server security linter.
+- [a2a-contract-test](https://auraone.ai/open/a2a-contract-test): A2A agent
+  card validator and contract tests.
+
+Turn recurring agent failures into a managed improvement program. [Talk to AuraOne](https://auraone.ai/contact?from=open:agent-studio-open)
