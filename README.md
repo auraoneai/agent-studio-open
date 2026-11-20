@@ -1,5 +1,56 @@
 # Agent Studio Open
 
+MCP and A2A agent trace debugger and replay.
+
+[![Try it in the browser](https://img.shields.io/badge/Try%20it%20in%20the%20browser-agentstudio.auraone.ai-2563eb)](https://agentstudio.auraone.ai)
+[![PyPI](https://img.shields.io/pypi/v/auraone-agent-studio-open)](https://pypi.org/project/auraone-agent-studio-open/)
+[![npm](https://img.shields.io/npm/v/@auraone/agent-studio)](https://www.npmjs.com/package/@auraone/agent-studio)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+## Quick Start
+
+```bash
+python -m pip install auraone-agent-studio-open==0.2.1
+agentstudio --json self-test
+```
+
+```json
+{
+  "imports": {
+    "a2a_contract_test": true,
+    "agent_trace_card": true,
+    "mcp_risk_linter": true,
+    "otel_eval_bridge": true,
+    "tool_call_replay": true
+  },
+  "ok": true
+}
+```
+
+Or open the hosted read-only build at
+[agentstudio.auraone.ai](https://agentstudio.auraone.ai) with no install.
+
+Import a recorded trace and export a pull request comment (run from `cli/` in a
+source checkout):
+
+```bash
+agentstudio import-trace tests/fixtures/openai_events.jsonl --format openai --store /tmp/refund.ast
+agentstudio export pr-comment /tmp/refund.ast --out /tmp/refund-comment.md
+```
+
+```markdown
+<!-- agentstudio-trace-card -->
+## Agent Studio Trace
+
+- Session: `unknown`
+- Tool calls: 2
+
+1. `lookup_order` status: `ok`
+2. `issue_refund` status: `ok`
+```
+
+## About
+
 Agent Studio Open is AuraOne's MIT-licensed, local-first IDE for debugging,
 replaying, comparing, and regression-testing AI agents that speak MCP and A2A.
 
@@ -8,6 +59,37 @@ teams, and security reviewers who need protocol evidence rather than a hosted
 trace dashboard. Its differentiator is one desktop/browser/VS Code/CLI workflow
 for endpoint discovery, trace inspection, deterministic replay, behavioral
 comparison, risk review, and CI artifact export.
+
+## What It Does and Doesn't Do
+
+It does:
+
+- connect to stdio (desktop) or remote SSE / HTTP / WebSocket MCP servers and
+  inspect tools, resources, prompts, manifests, and risk findings;
+- test A2A agent cards, record sessions into portable `.ast` trace stores, and
+  replay them deterministically with mocked tool outputs;
+- import OTEL GenAI spans or Phoenix JSON and export GitHub Actions, JUnit XML,
+  PR comments, trace cards, and AuraOne intake packets.
+
+It doesn't:
+
+- orchestrate agents or act as a hosted observability backend;
+- run stdio MCP or the OTLP receiver in the browser edition;
+- send telemetry by default, or include prompts, tool payloads, or provider
+  keys in telemetry.
+
+## CI Usage
+
+Generate a GitHub Actions regression workflow from committed replay fixtures
+(run from `cli/` in a source checkout):
+
+```bash
+agentstudio export gh-action tests/fixtures/regressions --out /tmp/agent-regression
+```
+
+The export writes `.github/workflows/agent-regression.yml`, the regression
+replay and assertion files, a `README.md`, and an
+`agentstudio-export-manifest.json` evidence file.
 
 ## Visual Workflow
 
@@ -216,6 +298,22 @@ behavior. Start with a non-sensitive fixture and a dry-run provider profile.
 Treat Homebrew, Windows, Linux, and automatic updater paths as unavailable until
 destination-specific evidence is published.
 
+## Part of the AuraOne Agent Reliability Workflow
+
+Agent Studio Open is the depth product of the AuraOne Open "agent failure to
+regression test" workflow:
+
+- [tool-call-replay](https://auraone.ai/open/tool-call-replay): turn a recorded
+  agent failure into a pytest regression.
+- [Agent Studio Open](https://auraone.ai/open/agent-studio-open): debug, replay,
+  and compare MCP and A2A agent traces.
+- [mcp-risk-linter](https://auraone.ai/open/mcp-risk-linter): offline MCP
+  server security linter.
+- [a2a-contract-test](https://auraone.ai/open/a2a-contract-test): A2A agent
+  card validator and contract tests.
+
 ## License
 
 MIT.
+
+Turn recurring agent failures into a managed improvement program. [Talk to AuraOne](https://auraone.ai/contact?from=open:agent-studio-open)

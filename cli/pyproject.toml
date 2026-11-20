@@ -5,12 +5,12 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "auraone-agent-studio-open"
 version = "0.2.1"
-description = "Headless Agent Studio Open protocol, trace-store, sidecar, and export CLI."
+description = "MCP and A2A agent trace debugger and replay: headless Agent Studio Open CLI for protocol checks, trace stores, and CI exports."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
 authors = [{ name = "AuraOne", email = "opensource@auraone.ai" }]
-keywords = ["mcp", "a2a", "opentelemetry", "agents", "replay", "debugging"]
+keywords = ["mcp", "a2a", "opentelemetry", "agents", "replay", "debugging", "mcp trace debugger", "a2a agent replay"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Intended Audience :: Developers",
@@ -29,8 +29,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/auraoneai/agent-studio-open"
+Homepage = "https://auraone.ai/open/agent-studio-open"
 Documentation = "https://github.com/auraoneai/agent-studio-open#readme"
+Source = "https://github.com/auraoneai/agent-studio-open"
 Repository = "https://github.com/auraoneai/agent-studio-open.git"
 Issues = "https://github.com/auraoneai/agent-studio-open/issues"
 Changelog = "https://github.com/auraoneai/agent-studio-open/blob/main/CHANGELOG.md"
