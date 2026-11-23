@@ -18,10 +18,14 @@ from typing import Any, Protocol
 from urllib.parse import urlparse
 
 MCP_PROTOCOL_VERSION = "2025-11-25"
+MAX_STDIO_MESSAGE_BYTES = 16 * 1024 * 1024
 
 
 class Transport(Protocol):
     def request(self, method: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
+        ...
+
+    def notify(self, method: str, params: dict[str, Any] | None = None) -> None:
         ...
 
     def close(self) -> None:
@@ -107,18 +111,49 @@ class StdioTransport:
         )
 
     def request(self, method: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
-        _request_id, payload = self._rpc.payload(method, params)
-        if self._proc.stdin is None:
-            raise RuntimeError("MCP server stdin is unavailable")
-        data = json.dumps(payload, separators=(",", ":")).encode("utf-8")
-        self._proc.stdin.write(b"Content-Length: " + str(len(data)).encode("ascii") + b"\r\n\r\n" + data)
-        self._proc.stdin.flush()
+        request_id, payload = self._rpc.payload(method, params)
+        self._send(payload)
         if self._proc.stdout is None:
             raise RuntimeError("MCP server stdout is unavailable")
-        response = _read_framed_json(self._proc.stdout)
+        try:
+            response = _read_jsonrpc_line(self._proc.stdout, request_id)
+        except EOFError as error:
+            tail = self._stderr_tail()
+            raise EOFError(f"{error}; stderr: {tail}" if tail else str(error)) from None
         if "error" in response:
             raise RuntimeError(f"MCP {method} failed: {response['error']}")
         return response.get("result", response)
+
+    def notify(self, method: str, params: dict[str, Any] | None = None) -> None:
+        payload: dict[str, Any] = {"jsonrpc": "2.0", "method": method}
+        if params is not None:
+            payload["params"] = params
+        self._send(payload)
+
+    def _send(self, payload: dict[str, Any]) -> None:
+        # MCP stdio framing: one UTF-8 JSON-RPC message per line, no embedded newlines.
+        if self._proc.stdin is None:
+            raise RuntimeError("MCP server stdin is unavailable")
+        body = json.dumps(payload, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+        assert b"\n" not in body  # nosec B101 - json.dumps escapes newlines inside strings
+        self._proc.stdin.write(body + b"\n")
+        self._proc.stdin.flush()
+
+    def _stderr_tail(self, limit: int = 2000) -> str:
+        """Best-effort, non-blocking read of whatever the server wrote to stderr."""
+        stderr = self._proc.stderr
+        if stderr is None:
+            return ""
+        try:
+            self._proc.wait(timeout=0.5)
+        except subprocess.TimeoutExpired:
+            pass
+        try:
+            os.set_blocking(stderr.fileno(), False)
+            data = stderr.read() or b""
+        except (OSError, ValueError):
+            return ""
+        return data.decode("utf-8", errors="replace").strip()[-limit:]
 
     def close(self) -> None:
         if self._proc.poll() is None:
@@ -164,6 +199,9 @@ class HTTPTransport:
         if "error" in parsed:
             raise RuntimeError(f"MCP {method} failed: {parsed['error']}")
         return parsed.get("result", parsed)
+
+    def notify(self, method: str, params: dict[str, Any] | None = None) -> None:
+        return None
 
     def close(self) -> None:
         return None
@@ -243,6 +281,9 @@ class SSETransport:
             raise
         raise TimeoutError(f"no SSE MCP response for {method}")
 
+    def notify(self, method: str, params: dict[str, Any] | None = None) -> None:
+        return None
+
     def close(self) -> None:
         return None
 
@@ -263,19 +304,23 @@ class WebSocketTransport:
             raise RuntimeError(f"MCP {method} failed: {parsed['error']}")
         return parsed.get("result", parsed)
 
+    def notify(self, method: str, params: dict[str, Any] | None = None) -> None:
+        return None
+
     def close(self) -> None:
         self._sock.close()
 
 
 def discover_manifest(transport: Transport, transport_name: str) -> MCPManifest:
     initialize = transport.request(
-            "initialize",
+        "initialize",
         {
             "protocolVersion": MCP_PROTOCOL_VERSION,
             "capabilities": {},
             "clientInfo": {"name": "agentstudio", "version": "0.2.1"},
         },
     )
+    transport.notify("notifications/initialized")
     tools = _items(transport.request("tools/list"), "tools")
     resources = _items(transport.request("resources/list"), "resources", tolerate_missing=True)
     prompts = _items(transport.request("prompts/list"), "prompts", tolerate_missing=True)
@@ -291,22 +336,25 @@ def _items(payload: dict[str, Any], key: str, tolerate_missing: bool = False) ->
     return [item for item in value if isinstance(item, dict)]
 
 
-def _read_framed_json(stream: Any) -> dict[str, Any]:
-    headers = b""
-    while b"\r\n\r\n" not in headers:
-        chunk = stream.read(1)
-        if not chunk:
+def _read_jsonrpc_line(stream: Any, expected_id: int, max_bytes: int = MAX_STDIO_MESSAGE_BYTES) -> dict[str, Any]:
+    """Read newline-delimited JSON-RPC messages until the response for expected_id."""
+    while True:
+        line = stream.readline(max_bytes + 1)
+        if not line:
             raise EOFError("MCP server closed stdout before response")
-        headers += chunk
-    length = None
-    for line in headers.decode("ascii", errors="replace").splitlines():
-        if line.lower().startswith("content-length:"):
-            length = int(line.split(":", 1)[1].strip())
-            break
-    if length is None:
-        raise ValueError("missing Content-Length in MCP response")
-    body = stream.read(length)
-    return json.loads(body.decode("utf-8"))
+        if len(line) > max_bytes and not line.endswith(b"\n"):
+            raise ValueError(f"MCP stdio message exceeds {max_bytes} bytes")
+        text = line.decode("utf-8").strip()
+        if not text:
+            continue
+        if text.lower().startswith("content-length:"):
+            raise ValueError("server uses LSP Content-Length framing; MCP stdio requires newline-delimited JSON")
+        message = json.loads(text)
+        if not isinstance(message, dict) or "method" in message:
+            # Notifications and server-initiated requests are not responses.
+            continue
+        if message.get("id") == expected_id:
+            return message
 
 
 def discover_oauth_metadata(url: str, timeout: float = 10, context: ssl.SSLContext | None = None) -> dict[str, Any]:
