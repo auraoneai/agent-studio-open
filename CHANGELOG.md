@@ -9,6 +9,9 @@ All notable changes to Agent Studio Open are documented in this file.
 - Corrected the public npm install and release-truth guidance to identify
   `@auraone/agent-studio@0.2.1` as live and `0.2.2` as an unpublished
   candidate pending registry write authorization.
+- `agentstudio connect stdio` now speaks spec-compliant newline-delimited
+  JSON-RPC (instead of LSP `Content-Length` framing), skips interleaved server
+  notifications, and sends `notifications/initialized` after `initialize`.
 
 ## 0.2.1 - 2026-07-13
 

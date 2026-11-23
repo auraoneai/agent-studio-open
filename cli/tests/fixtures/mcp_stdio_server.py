@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import os
 import sys
+import time
 
 
 TOOLS = [
@@ -12,33 +14,44 @@ TOOLS = [
     }
 ]
 
-
-def read_message() -> dict:
-    headers = b""
-    while b"\r\n\r\n" not in headers:
-        chunk = sys.stdin.buffer.read(1)
-        if not chunk:
-            raise EOFError
-        headers += chunk
-    length = 0
-    for line in headers.decode("ascii").splitlines():
-        if line.lower().startswith("content-length:"):
-            length = int(line.split(":", 1)[1].strip())
-    return json.loads(sys.stdin.buffer.read(length).decode("utf-8"))
+# FIXTURE_MODE: "" (newline-delimited JSON-RPC), "exit" (exit before responding),
+# "lsp" (answer with legacy Content-Length framing), "split" (each message in small chunks).
+MODE = os.environ.get("FIXTURE_MODE", "")
 
 
 def write_message(payload: dict) -> None:
-    data = json.dumps(payload, separators=(",", ":")).encode("utf-8")
-    sys.stdout.buffer.write(b"Content-Length: " + str(len(data)).encode("ascii") + b"\r\n\r\n" + data)
+    data = json.dumps(payload, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    if MODE == "lsp":
+        sys.stdout.buffer.write(b"Content-Length: " + str(len(data)).encode("ascii") + b"\r\n\r\n" + data)
+    elif MODE == "split":
+        # One message in several flushed writes, splitting inside a UTF-8 sequence.
+        line = data + b"\n"
+        for start in range(0, len(line), 7):
+            sys.stdout.buffer.write(line[start:start + 7])
+            sys.stdout.buffer.flush()
+            time.sleep(0.001)
+    else:
+        sys.stdout.buffer.write(data + b"\n")
     sys.stdout.buffer.flush()
 
 
-while True:
-    try:
-        request = read_message()
-    except EOFError:
-        break
+initialized = False
+for line in sys.stdin.buffer:
+    if not line.strip():
+        continue
+    request = json.loads(line)
     method = request.get("method")
+    if "id" not in request:
+        # Notifications such as notifications/initialized get no response.
+        initialized = initialized or method == "notifications/initialized"
+        continue
+    if MODE == "exit":
+        sys.stderr.write("fixture exiting before response\n")
+        sys.stderr.flush()
+        sys.exit(3)
+    if method != "initialize" and not initialized:
+        write_message({"jsonrpc": "2.0", "id": request.get("id"), "error": {"code": -32600, "message": "not initialized"}})
+        continue
     if method == "initialize":
         result = {"protocolVersion": "2024-11-05", "serverInfo": {"name": "fixture", "version": "0.1.0"}, "capabilities": {"tools": {}}}
     elif method == "tools/list":
@@ -47,6 +60,18 @@ while True:
         result = {"resources": []}
     elif method == "prompts/list":
         result = {"prompts": []}
-    else:
+    elif method == "ping":
         result = {}
+    elif method == "tools/call":
+        params = request.get("params") or {}
+        if params.get("name") != "lookup_order":
+            result = {"content": [{"type": "text", "text": f"unknown tool {params.get('name')}"}], "isError": True}
+        else:
+            text = json.dumps(params.get("arguments") or {}, ensure_ascii=False, sort_keys=True)
+            result = {"content": [{"type": "text", "text": text}], "isError": False}
+    else:
+        write_message({"jsonrpc": "2.0", "id": request.get("id"), "error": {"code": -32601, "message": f"method not found: {method}"}})
+        continue
+    # Interleave a server notification before each response to exercise client-side skipping.
+    write_message({"jsonrpc": "2.0", "method": "notifications/message", "params": {"level": "info", "data": f"handling {method}"}})
     write_message({"jsonrpc": "2.0", "id": request.get("id"), "result": result})

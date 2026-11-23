@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import io
 import json
 import socket
 import struct
@@ -14,9 +15,11 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from agentstudio.cli import main
 from agentstudio.importers import load_replay_case
-from agentstudio.mcp import RemoteAuthConfig
+from agentstudio.mcp import RemoteAuthConfig, StdioTransport, _read_jsonrpc_line, discover_manifest
 from agentstudio.otlp_receiver import DEFAULT_MAX_OTLP_PAYLOAD_BYTES, OTLPHandler, start_otlp_grpc
 from agentstudio.trace_store import TraceStore
 
@@ -32,6 +35,53 @@ def test_stdio_mcp_connect_smoke(capsys):
     payload = json.loads(capsys.readouterr().out)
     assert payload["transport"] == "stdio"
     assert payload["tools"][0]["name"] == "lookup_order"
+
+
+def test_stdio_transport_skips_notifications_and_sends_initialized():
+    transport = StdioTransport(sys.executable, [str(FIXTURES / "mcp_stdio_server.py")])
+    try:
+        # The fixture emits notifications/message before every response and rejects
+        # tools/list unless notifications/initialized arrived first.
+        manifest = discover_manifest(transport, "stdio")
+    finally:
+        transport.close()
+    assert manifest.initialize["serverInfo"]["name"] == "fixture"
+    assert manifest.tools[0]["name"] == "lookup_order"
+
+
+def test_stdio_transport_eof_raises_clear_error():
+    transport = StdioTransport(sys.executable, [str(FIXTURES / "mcp_stdio_server.py")], env={"FIXTURE_MODE": "exit"})
+    try:
+        with pytest.raises(EOFError, match="closed stdout before response.*fixture exiting before response"):
+            transport.request("initialize", {})
+    finally:
+        transport.close()
+
+
+def test_stdio_transport_rejects_content_length_framing():
+    transport = StdioTransport(sys.executable, [str(FIXTURES / "mcp_stdio_server.py")], env={"FIXTURE_MODE": "lsp"})
+    try:
+        with pytest.raises(ValueError, match="LSP Content-Length framing"):
+            transport.request("initialize", {})
+    finally:
+        transport.close()
+
+
+def test_read_jsonrpc_line_framing_rules():
+    stream = io.BytesIO(
+        b"\n"
+        + b'{"jsonrpc":"2.0","method":"notifications/message","params":{}}\n'
+        + b'{"jsonrpc":"2.0","id":9,"method":"ping"}\n'
+        + b'{"jsonrpc":"2.0","id":1,"result":{"stale":true}}\n'
+        + b'{"jsonrpc":"2.0","id":2,"result":{"ok":true}}\n'
+    )
+    assert _read_jsonrpc_line(stream, 2) == {"jsonrpc": "2.0", "id": 2, "result": {"ok": True}}
+    with pytest.raises(EOFError):
+        _read_jsonrpc_line(stream, 3)
+    with pytest.raises(ValueError, match="LSP Content-Length framing"):
+        _read_jsonrpc_line(io.BytesIO(b"Content-Length: 2\r\n\r\n{}"), 1)
+    with pytest.raises(ValueError, match="exceeds 16 bytes"):
+        _read_jsonrpc_line(io.BytesIO(b'{"id":1,"result":"' + b"x" * 32 + b'"}\n'), 1, max_bytes=16)
 
 
 def test_http_sse_and_websocket_mcp_connect_smoke(capsys):
